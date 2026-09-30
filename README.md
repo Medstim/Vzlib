@@ -28,6 +28,8 @@ A clean, Simple Roblox UI library designed for simple script GUI's.
 ---
 ## All the main stuff 
 
+# Icons: https://kaan650.github.io/builder-icons/
+
 - [Creating a Window](https://github.com/Medstim/UI-lib-/blob/main/README.md#creating-a-window)
 - [Creating a Tab](https://github.com/Medstim/UI-lib-/blob/main/README.md#creating-tabs)
 - [Components](https://github.com/Medstim/UI-lib-/blob/main/README.md#components)
