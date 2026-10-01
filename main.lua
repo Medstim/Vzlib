@@ -668,18 +668,151 @@ function Library:CreateWindow(cfg)
 	local MinBtn   = ctrlBtn("minus", -42, Theme.Text)
 	local settingsBtn = ctrlBtn("gear", -74, Theme.Text)
 
-
-	local settingsMenu = create("Frame", {
-		Name = "SettingsMenu", BackgroundColor3 = Theme.Secondary,
-		BackgroundTransparency = 0.05, BorderSizePixel = 0,
-		Position = UDim2.new(1, -140, 1, 4), Size = UDim2.new(0, 140, 0, 0),
-		Visible = false, Parent = TopBar,
-	}, {
-		create("UIListLayout", { Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder }),
-		create("UIPadding", { PaddingTop = UDim.new(0, 8), PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8) }),
-		create("UIStroke", { Color = Theme.Stroke, Transparency = 0.5 }),
-		create("UICorner", { CornerRadius = UDim.new(0, 6) })
-	})
+	----------------------------------------------------------------
+		-- TopBar Settings Flyout
+		----------------------------------------------------------------
+		local settingsMenu = create("CanvasGroup", {
+			Name = "SettingsMenu",
+			BackgroundColor3 = Theme.Secondary,
+			BackgroundTransparency = 0.05,
+			Position = UDim2.new(1, -190, 1, 6),
+			Size = UDim2.new(0, 180, 0, 0),
+			ClipsDescendants = true,
+			Visible = false,
+			ZIndex = 10,
+			Parent = TopBar,
+		})
+		corner(settingsMenu, 6)
+		stroke(settingsMenu, Theme.Stroke, 0.5)
+	
+		local menuList = create("ScrollingFrame", {
+			BackgroundTransparency = 1,
+			Size = UDim2.new(1, 0, 1, 0),
+			CanvasSize = UDim2.new(),
+			AutomaticCanvasSize = Enum.AutomaticSize.Y,
+			ScrollBarThickness = 2,
+			ScrollBarImageColor3 = Theme.Stroke,
+			BorderSizePixel = 0,
+			Parent = settingsMenu,
+		}, {
+			create("UIListLayout", { Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder }),
+			create("UIPadding", { PaddingTop = UDim.new(0, 8), PaddingBottom = UDim.new(0, 8), PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8) }),
+		})
+	
+		-- Helper: Section Header
+		local function addMenuHeader(text)
+			create("TextLabel", {
+				BackgroundTransparency = 1,
+				Text = text,
+				FontFace = FONT_TITLE,
+				TextColor3 = Theme.SubText,
+				TextSize = 11,
+				TextXAlignment = Enum.TextXAlignment.Left,
+				Size = UDim2.new(1, 0, 0, 14),
+				Parent = menuList,
+			})
+		end
+	
+		-- 1. Theme Presets Label & Dropdown
+		addMenuHeader("THEME PRESETS")
+	
+		local themeNames = Library:GetThemes()
+		for _, themeName in ipairs(themeNames) do
+			local themeBtn = create("TextButton", {
+				Text = "", AutoButtonColor = false,
+				BackgroundColor3 = Theme.Element,
+				Size = UDim2.new(1, 0, 0, 24),
+				BorderSizePixel = 0,
+				Parent = menuList,
+			})
+			corner(themeBtn, 4)
+			stroke(themeBtn, Theme.Stroke, STROKE_T)
+	
+			local lbl = create("TextLabel", {
+				BackgroundTransparency = 1,
+				Text = themeName,
+				FontFace = FONT_MAIN,
+				TextColor3 = Theme.Text,
+				TextSize = 12,
+				Position = UDim2.new(0, 8, 0, 0),
+				Size = UDim2.new(1, -16, 1, 0),
+				TextXAlignment = Enum.TextXAlignment.Left,
+				Parent = themeBtn,
+			})
+	
+			themeBtn.MouseEnter:Connect(function() tween(themeBtn, TI, { BackgroundColor3 = Theme.ElementHover }) end)
+			themeBtn.MouseLeave:Connect(function() tween(themeBtn, TI, { BackgroundColor3 = Theme.Element }) end)
+			themeBtn.Activated:Connect(function()
+				Window:SetTheme(themeName)
+			end)
+		end
+	
+		-- 2. Toggle Keybind Setting
+		addMenuHeader("HOTKEY")
+	
+		local currentToggleKey = cfg.ToggleKey or Enum.KeyCode.RightShift
+		local bindingHotkey = false
+	
+		local keyBtn = create("TextButton", {
+			Text = "", AutoButtonColor = false,
+			BackgroundColor3 = Theme.Element,
+			Size = UDim2.new(1, 0, 0, 26),
+			BorderSizePixel = 0,
+			Parent = menuList,
+		})
+		corner(keyBtn, 4)
+		stroke(keyBtn, Theme.Stroke, STROKE_T)
+	
+		local keyLbl = create("TextLabel", {
+			BackgroundTransparency = 1,
+			Text = "Toggle: " .. currentToggleKey.Name,
+			FontFace = FONT_MAIN,
+			TextColor3 = Theme.Text,
+			TextSize = 12,
+			Size = UDim2.new(1, 0, 1, 0),
+			Parent = keyBtn,
+		})
+	
+		keyBtn.Activated:Connect(function()
+			if bindingHotkey then return end
+			bindingHotkey = true
+			keyLbl.Text = "Press key..."
+	
+			local conn
+			conn = UserInputService.InputBegan:Connect(function(inp, gp)
+				if gp then return end
+				if inp.UserInputType == Enum.UserInputType.Keyboard then
+					conn:Disconnect()
+					currentToggleKey = inp.KeyCode
+					bindingHotkey = false
+					keyLbl.Text = "Toggle: " .. currentToggleKey.Name
+	
+					if toggleConn then toggleConn:Disconnect() end
+					toggleConn = UserInputService.InputBegan:Connect(function(newInp, newGp)
+						if newGp then return end
+						if newInp.KeyCode == currentToggleKey then
+							hidden = not hidden
+							BG.Visible = not hidden
+						end
+					end)
+				end
+			end)
+		end)
+	
+		-- Open/Close Animation for Gear Button
+		local menuOpen = false
+		settingsBtn.Activated:Connect(function()
+			menuOpen = not menuOpen
+			if menuOpen then
+				settingsMenu.Visible = true
+			end
+			tween(settingsMenu, TI_S, { Size = UDim2.new(0, 180, 0, menuOpen and 185 or 0) })
+			if not menuOpen then
+				task.delay(0.18, function()
+					if not menuOpen then settingsMenu.Visible = false end
+				end)
+			end
+		end)
 
 	-- Body
 	local Body = create("Frame", {
