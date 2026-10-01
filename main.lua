@@ -3,36 +3,36 @@ local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local HttpService = game:GetService("HttpService")
 
--- Executor globals (names differ between executors) -----------------
+-- Executor globals
 local setClipboard = setclipboard or toclipboard or writeclipboard or write_clipboard
 	or (syn and syn.write_clipboard) or (Clipboard and Clipboard.set)
 local httpRequest = (syn and syn.request) or (http and http.request) or http_request or request
 
 ----------------------------------------------------------------------
--- Theme
+-- Theme Definitions
 ----------------------------------------------------------------------
 
 local DefaultTheme = {
 	Background = Color3.fromRGB(16, 16, 16),
-	Secondary = Color3.fromRGB(27, 27, 27), -- Secondary Background color
+	Secondary = Color3.fromRGB(24, 24, 27),
 
-	Element = Color3.fromRGB(34, 34, 34),
-	ElementHover = Color3.fromRGB(42, 42, 42),
-	ElementPressed = Color3.fromRGB(48, 48, 48),
+	Element = Color3.fromRGB(32, 32, 36),
+	ElementHover = Color3.fromRGB(42, 42, 48),
+	ElementPressed = Color3.fromRGB(50, 50, 58),
 
-	Off = Color3.fromRGB(55, 55, 55),
-	Knob = Color3.fromRGB(255, 255, 255), -- toggle / slider knob
+	Off = Color3.fromRGB(50, 50, 55),
+	Knob = Color3.fromRGB(255, 255, 255),
 
-	Stroke = Color3.fromRGB(171, 171, 171),
-	StrokeDim = Color3.fromRGB(65, 65, 65),
+	Stroke = Color3.fromRGB(70, 70, 78),
+	StrokeDim = Color3.fromRGB(45, 45, 50),
 
 	Text = Color3.fromRGB(255, 255, 255),
-	SubText = Color3.fromRGB(175, 175, 175), -- Secondary Text color
+	SubText = Color3.fromRGB(160, 160, 175),
 
 	Accent = Color3.fromRGB(100, 160, 255),
 	Success = Color3.fromRGB(90, 205, 130),
 	Warning = Color3.fromRGB(255, 190, 70),
-	WarningBg = Color3.fromRGB(40, 34, 20), -- background of warning rows
+	WarningBg = Color3.fromRGB(40, 34, 20),
 	Error = Color3.fromRGB(255, 90, 90),
 }
 
@@ -44,7 +44,6 @@ local function cloneTheme(source)
 	return theme
 end
 
--- Keeps only known keys holding Color3 values (warns about the rest).
 local function sanitizeTheme(input)
 	local clean = {}
 	if type(input) ~= "table" then return clean end
@@ -68,26 +67,44 @@ local function applyTheme(base, overrides)
 	return theme
 end
 
--- Built-in presets. Anything omitted falls back to the default (Dark) value.
+-- Built-in presets
 local Themes = {
 	Dark = cloneTheme(DefaultTheme),
 
+	-- Improved Light Theme (Clean, high-contrast, modern slate accents)
 	Light = applyTheme(DefaultTheme, {
-		Background = Color3.fromRGB(243, 243, 246),
-		Secondary = Color3.fromRGB(232, 232, 237),
+		Background = Color3.fromRGB(245, 246, 250),
+		Secondary = Color3.fromRGB(230, 233, 240),
 		Element = Color3.fromRGB(255, 255, 255),
-		ElementHover = Color3.fromRGB(240, 240, 245),
-		ElementPressed = Color3.fromRGB(228, 228, 235),
-		Off = Color3.fromRGB(200, 200, 210),
-		Stroke = Color3.fromRGB(70, 70, 85),
-		StrokeDim = Color3.fromRGB(205, 205, 214),
-		Text = Color3.fromRGB(24, 24, 30),
-		SubText = Color3.fromRGB(105, 105, 118),
-		Accent = Color3.fromRGB(55, 115, 235),
-		Success = Color3.fromRGB(30, 155, 85),
-		Warning = Color3.fromRGB(196, 120, 0),
-		WarningBg = Color3.fromRGB(255, 243, 214),
-		Error = Color3.fromRGB(214, 60, 60),
+		ElementHover = Color3.fromRGB(238, 240, 246),
+		ElementPressed = Color3.fromRGB(225, 228, 238),
+		Off = Color3.fromRGB(205, 210, 220),
+		Stroke = Color3.fromRGB(180, 185, 200),
+		StrokeDim = Color3.fromRGB(215, 220, 230),
+		Text = Color3.fromRGB(20, 22, 28),
+		SubText = Color3.fromRGB(90, 95, 110),
+		Accent = Color3.fromRGB(45, 105, 225),
+		Success = Color3.fromRGB(30, 160, 90),
+		Warning = Color3.fromRGB(210, 130, 0),
+		WarningBg = Color3.fromRGB(255, 242, 210),
+		Error = Color3.fromRGB(220, 50, 50),
+	}),
+
+	-- Glass Theme (Deep frost with glowing vivid blue accent)
+	Glass = applyTheme(DefaultTheme, {
+		Background = Color3.fromRGB(12, 16, 24),
+		Secondary = Color3.fromRGB(20, 26, 38),
+		Element = Color3.fromRGB(28, 36, 52),
+		ElementHover = Color3.fromRGB(38, 48, 68),
+		ElementPressed = Color3.fromRGB(48, 60, 84),
+		Off = Color3.fromRGB(40, 50, 70),
+		Stroke = Color3.fromRGB(90, 115, 160),
+		StrokeDim = Color3.fromRGB(50, 65, 95),
+		Text = Color3.fromRGB(240, 245, 255),
+		SubText = Color3.fromRGB(140, 160, 190),
+		Accent = Color3.fromRGB(0, 195, 255),
+		Success = Color3.fromRGB(60, 230, 150),
+		Error = Color3.fromRGB(255, 80, 100),
 	}),
 
 	Midnight = applyTheme(DefaultTheme, {
@@ -122,7 +139,6 @@ local Themes = {
 	}),
 }
 
--- Accepts a preset name or a (partial) table. Returns a clean patch or nil.
 local function resolveThemeInput(input)
 	if type(input) == "string" then
 		local preset = Themes[input]
@@ -138,7 +154,7 @@ local function resolveThemeInput(input)
 	return nil
 end
 
--- Scopes ---------------------------------------------------------------
+-- Scopes Engine --------------------------------------------------------
 local THEME_TI = TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 local REF_MT = {}
 
@@ -157,7 +173,7 @@ Scope.__index = Scope
 local function newScope(base)
 	local scope = setmetatable({
 		colors = cloneTheme(base),
-		bindings = setmetatable({}, { __mode = "k" }), -- inst -> { prop -> key | fn(colors) }
+		bindings = setmetatable({}, { __mode = "k" }),
 		listeners = {},
 		_nextId = 0,
 	}, Scope)
@@ -181,7 +197,6 @@ local function evalBinding(scope, binding)
 	return scope.colors[binding]
 end
 
--- Bind `inst[prop]` to a theme key, or to a function(colors) for state-dependent colors.
 function Scope:Bind(inst, prop, binding)
 	local props = self.bindings[inst]
 	if not props then
@@ -194,16 +209,18 @@ end
 
 function Scope:Refresh(animate)
 	for inst, props in pairs(self.bindings) do
-		for prop, binding in pairs(props) do
-			local target = evalBinding(self, binding)
-			if target ~= nil then
-				pcall(function()
-					if animate then
-						TweenService:Create(inst, THEME_TI, { [prop] = target }):Play()
-					else
-						inst[prop] = target
-					end
-				end)
+		if inst and inst.Parent then
+			for prop, binding in pairs(props) do
+				local target = evalBinding(self, binding)
+				if target ~= nil then
+					pcall(function()
+						if animate then
+							TweenService:Create(inst, THEME_TI, { [prop] = target }):Play()
+						else
+							inst[prop] = target
+						end
+					end)
+				end
 			end
 		end
 	end
@@ -212,7 +229,6 @@ function Scope:Refresh(animate)
 	end
 end
 
--- `patch` must already be sanitized (see resolveThemeInput).
 function Scope:Apply(patch, animate)
 	local changed = false
 	for key, value in pairs(patch) do
@@ -240,8 +256,7 @@ local FONT_MAIN  = Font.new("rbxasset://fonts/families/Jura.json", Enum.FontWeig
 
 local TI    = TweenInfo.new(0.16, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 local TI_S  = TweenInfo.new(0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
-
-local STROKE_T = 0.83 -- matches the TopBar stroke
+local STROKE_T = 0.65
 
 ----------------------------------------------------------------------
 -- Helpers
@@ -271,13 +286,12 @@ end
 local function stroke(parent, color, trans, thick)
 	return create("UIStroke", {
 		Color = color or GlobalScope.refs.Stroke,
-		Transparency = trans or 0.5,
+		Transparency = trans or STROKE_T,
 		Thickness = thick or 1,
 		Parent = parent,
 	})
 end
 
--- UIShadow is a beta instance; guard so the lib never hard-errors if it's absent
 local function addShadow(parent, blur, trans)
 	local ok, shadow = pcall(function()
 		return create("UIShadow", {
@@ -308,7 +322,6 @@ local function icon(name, size, filled, color)
 	})
 end
 
--- Draggable window via a handle
 local function makeDraggable(frame, handle)
 	local dragging, dragInput, startPos, startFramePos
 	handle.InputBegan:Connect(function(inp)
@@ -336,7 +349,6 @@ local function makeDraggable(frame, handle)
 	end)
 end
 
--- Normalized drag region (sliders / color squares). Supports mouse + touch.
 local function bindDrag(region, onUpdate)
 	local dragging = false
 	local function upd(inp)
@@ -370,16 +382,8 @@ local function getGuiParent()
 	return ok and cg or game:GetService("CoreGui")
 end
 
--- Copy a string to clipboard. Returns whether a clipboard fn was available.
-local function copyToClipboard(str)
-	if not setClipboard then return false end
-	return pcall(setClipboard, str)
-end
-
-
-
 ----------------------------------------------------------------------
--- Library root
+-- Library Root
 ----------------------------------------------------------------------
 local Library = {}
 Library.__index = Library
@@ -394,7 +398,6 @@ local ScreenGui = create("ScreenGui", {
 pcall(function() if syn and syn.protect_gui then syn.protect_gui(ScreenGui) end end)
 ScreenGui.Parent = getGuiParent()
 
--- Notification stack (bottom-right)
 local NotifHolder = create("Frame", {
 	Name = "Notifications",
 	BackgroundTransparency = 1,
@@ -411,7 +414,7 @@ local NotifHolder = create("Frame", {
 	}),
 })
 
-Library.MaxNotifications = 5 -- oldest is dismissed past this (0 = unlimited)
+Library.MaxNotifications = 5
 Library._windows = {}
 
 local NOTIFY_TYPES = {
@@ -424,19 +427,17 @@ local NOTIFY_TYPES = {
 local activeNotifs = {}
 local notifCounter = 0
 
-
 function Library:Notify(cfg, scope)
 	if type(cfg) == "string" then cfg = { Content = cfg } end
 	cfg = cfg or {}
-	scope = scope or GlobalScope -- Window:Notify passes the window's own scope
+	scope = scope or GlobalScope
 	local Theme = scope.refs
 
 	local kind = NOTIFY_TYPES[cfg.Type] or NOTIFY_TYPES.Info
 	local tint = Theme[kind.color]
 	local dur = tonumber(cfg.Duration) or 4
 	local timed = dur > 0
-	local iconName = cfg.Icon
-	if iconName == nil then iconName = kind.icon end
+	local iconName = cfg.Icon or kind.icon
 
 	local cap = Library.MaxNotifications
 	while cap > 0 and #activeNotifs >= cap do
@@ -515,7 +516,6 @@ function Library:Notify(cfg, scope)
 		tween(card, TI, { GroupTransparency = 1, Position = UDim2.new(0, 32, 0, 0) })
 		task.delay(0.16, function()
 			if not wrapper.Parent then return end
-			-- collapse the gap so the stack closes smoothly
 			wrapper.AutomaticSize = Enum.AutomaticSize.None
 			wrapper.Size = UDim2.new(1, 0, 0, wrapper.AbsoluteSize.Y)
 			local t = tween(wrapper, TI, { Size = UDim2.new(1, 0, 0, 0) })
@@ -524,23 +524,11 @@ function Library:Notify(cfg, scope)
 		end)
 	end
 
-	-- Update text in place; restarts the timer.
-	function handle:Update(new)
-		if dead or type(new) ~= "table" then return end
-		if new.Title ~= nil then titleLbl.Text = new.Title end
-		if new.Content ~= nil then
-			bodyLbl.Text = new.Content
-			bodyLbl.Visible = new.Content ~= ""
-		end
-		elapsed = 0
-	end
-
 	card.MouseEnter:Connect(function() hovered = true end)
 	card.MouseLeave:Connect(function() hovered = false end)
 	if cfg.ClickToDismiss ~= false then
 		card.InputBegan:Connect(function(inp)
-			if inp.UserInputType == Enum.UserInputType.MouseButton1
-				or inp.UserInputType == Enum.UserInputType.Touch then
+			if inp.UserInputType == Enum.UserInputType.MouseButton1 or inp.UserInputType == Enum.UserInputType.Touch then
 				handle:Dismiss()
 			end
 		end)
@@ -570,9 +558,7 @@ function Library:CreateWindow(cfg)
 	local overrides = {}
 
 	local Window = { Tabs = {}, _current = nil, _scope = scope, _overrides = overrides }
-	Window.Theme = scope.colors -- live, resolved colors
-
-	-- Components below read `Theme.X` as a theme reference (see Theme system).
+	Window.Theme = scope.colors
 	local Theme = scope.refs
 
 	do
@@ -587,8 +573,6 @@ function Library:CreateWindow(cfg)
 		scope:Apply(initial, false)
 	end
 
-	-- Theme API ---------------------------------------------------------
-	-- Window:SetTheme("Light") / Window:SetTheme({ Accent = Color3.fromRGB(...) })
 	function Window:SetTheme(input, animate)
 		local patch = resolveThemeInput(input)
 		if not patch then return false end
@@ -598,7 +582,7 @@ function Library:CreateWindow(cfg)
 	end
 	function Window:GetTheme() return cloneTheme(scope.colors) end
 	function Window:SetAccent(color, animate) return Window:SetTheme({ Accent = color }, animate) end
-	function Window:ResetTheme(animate) -- follow the global theme again
+	function Window:ResetTheme(animate)
 		table.clear(overrides)
 		scope:Apply(GlobalScope.colors, animate ~= false)
 	end
@@ -609,15 +593,15 @@ function Library:CreateWindow(cfg)
 		Name = "Window",
 		AnchorPoint = Vector2.new(0.5, 0.5),
 		Position = UDim2.new(0.5, 0, 0.5, 0),
-		Size = UDim2.fromOffset(532, 410),
+		Size = UDim2.fromOffset(540, 420),
 		BackgroundColor3 = Theme.Background,
-		BackgroundTransparency = 0.05,
+		BackgroundTransparency = 0.02,
 		BorderSizePixel = 0,
 		Parent = ScreenGui,
 	})
-	corner(BG, 6)
-	stroke(BG, Theme.Stroke, 0.5)
-	addShadow(BG, 20, 0.5)
+	corner(BG, 8)
+	stroke(BG, Theme.Stroke, STROKE_T)
+	addShadow(BG, 24, 0.4)
 
 	-- Top bar
 	local TopBar = create("Frame", {
@@ -630,10 +614,9 @@ function Library:CreateWindow(cfg)
 		Parent = BG,
 	})
 	stroke(TopBar, Theme.Stroke, STROKE_T)
-	addShadow(TopBar, 10, 0.86)
 
-	create("TextLabel", {
-		Name = "Title", Text = cfg.Title or "Lib Name",
+	local titleLbl = create("TextLabel", {
+		Name = "Title", Text = cfg.Title or "VaehzUI",
 		FontFace = FONT_TITLE, TextColor3 = Theme.Text, TextSize = 16,
 		TextXAlignment = Enum.TextXAlignment.Left, TextWrapped = true,
 		BackgroundTransparency = 1, AnchorPoint = Vector2.new(0, 0.5),
@@ -641,7 +624,7 @@ function Library:CreateWindow(cfg)
 		Parent = TopBar,
 	})
 
-	local function ctrlBtn(iconName, offsetX, hoverColor)
+	local function ctrlBtn(iconName, offsetX, hoverColorKey)
 		local b = create("TextButton", {
 			Text = "", AutoButtonColor = false, BackgroundColor3 = Theme.Element,
 			BackgroundTransparency = 1, AnchorPoint = Vector2.new(1, 0.5),
@@ -655,7 +638,7 @@ function Library:CreateWindow(cfg)
 		ic.Parent = b
 		b.MouseEnter:Connect(function()
 			tween(b, TI, { BackgroundTransparency = 0 })
-			tween(ic, TI, { TextColor3 = hoverColor or Theme.Text })
+			tween(ic, TI, { TextColor3 = hoverColorKey and Theme[hoverColorKey] or Theme.Text })
 		end)
 		b.MouseLeave:Connect(function()
 			tween(b, TI, { BackgroundTransparency = 1 })
@@ -664,155 +647,149 @@ function Library:CreateWindow(cfg)
 		return b
 	end
 
-	local CloseBtn = ctrlBtn("x", -10, Color3.fromRGB(255, 90, 90))
-	local MinBtn   = ctrlBtn("minus", -42, Theme.Text)
-	local settingsBtn = ctrlBtn("gear", -74, Theme.Text)
+	local CloseBtn = ctrlBtn("x", -10, "Error")
+	local MinBtn   = ctrlBtn("minus", -42, "Text")
+	local settingsBtn = ctrlBtn("gear", -74, "Text")
 
 	----------------------------------------------------------------
-		-- TopBar Settings Flyout
-		----------------------------------------------------------------
-		local settingsMenu = create("CanvasGroup", {
-			Name = "SettingsMenu",
-			BackgroundColor3 = Theme.Secondary,
-			BackgroundTransparency = 0.05,
-			Position = UDim2.new(1, -190, 1, 6),
-			Size = UDim2.new(0, 180, 0, 0),
-			ClipsDescendants = true,
-			Visible = false,
-			ZIndex = 10,
-			Parent = TopBar,
-		})
-		corner(settingsMenu, 6)
-		stroke(settingsMenu, Theme.Stroke, 0.5)
-	
-		local menuList = create("ScrollingFrame", {
+	-- Permanent TopBar Settings Flyout
+	----------------------------------------------------------------
+	local settingsMenu = create("CanvasGroup", {
+		Name = "SettingsMenu",
+		BackgroundColor3 = Theme.Secondary,
+		BackgroundTransparency = 0.05,
+		Position = UDim2.new(1, -190, 1, 6),
+		Size = UDim2.new(0, 180, 0, 0),
+		ClipsDescendants = true,
+		Visible = false,
+		ZIndex = 10,
+		Parent = TopBar,
+	})
+	corner(settingsMenu, 6)
+	stroke(settingsMenu, Theme.Stroke, STROKE_T)
+
+	local menuList = create("ScrollingFrame", {
+		BackgroundTransparency = 1,
+		Size = UDim2.new(1, 0, 1, 0),
+		CanvasSize = UDim2.new(),
+		AutomaticCanvasSize = Enum.AutomaticSize.Y,
+		ScrollBarThickness = 2,
+		ScrollBarImageColor3 = Theme.Stroke,
+		BorderSizePixel = 0,
+		Parent = settingsMenu,
+	}, {
+		create("UIListLayout", { Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder }),
+		create("UIPadding", { PaddingTop = UDim.new(0, 8), PaddingBottom = UDim.new(0, 8), PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8) }),
+	})
+
+	local function addMenuHeader(text)
+		create("TextLabel", {
 			BackgroundTransparency = 1,
-			Size = UDim2.new(1, 0, 1, 0),
-			CanvasSize = UDim2.new(),
-			AutomaticCanvasSize = Enum.AutomaticSize.Y,
-			ScrollBarThickness = 2,
-			ScrollBarImageColor3 = Theme.Stroke,
-			BorderSizePixel = 0,
-			Parent = settingsMenu,
-		}, {
-			create("UIListLayout", { Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder }),
-			create("UIPadding", { PaddingTop = UDim.new(0, 8), PaddingBottom = UDim.new(0, 8), PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8) }),
+			Text = text,
+			FontFace = FONT_TITLE,
+			TextColor3 = Theme.SubText,
+			TextSize = 11,
+			TextXAlignment = Enum.TextXAlignment.Left,
+			Size = UDim2.new(1, 0, 0, 14),
+			Parent = menuList,
 		})
-	
-		-- Helper: Section Header
-		local function addMenuHeader(text)
-			create("TextLabel", {
-				BackgroundTransparency = 1,
-				Text = text,
-				FontFace = FONT_TITLE,
-				TextColor3 = Theme.SubText,
-				TextSize = 11,
-				TextXAlignment = Enum.TextXAlignment.Left,
-				Size = UDim2.new(1, 0, 0, 14),
-				Parent = menuList,
-			})
-		end
-	
-		-- 1. Theme Presets Label & Dropdown
-		addMenuHeader("THEME PRESETS")
-	
-		local themeNames = Library:GetThemes()
-		for _, themeName in ipairs(themeNames) do
-			local themeBtn = create("TextButton", {
-				Text = "", AutoButtonColor = false,
-				BackgroundColor3 = Theme.Element,
-				Size = UDim2.new(1, 0, 0, 24),
-				BorderSizePixel = 0,
-				Parent = menuList,
-			})
-			corner(themeBtn, 4)
-			stroke(themeBtn, Theme.Stroke, STROKE_T)
-	
-			local lbl = create("TextLabel", {
-				BackgroundTransparency = 1,
-				Text = themeName,
-				FontFace = FONT_MAIN,
-				TextColor3 = Theme.Text,
-				TextSize = 12,
-				Position = UDim2.new(0, 8, 0, 0),
-				Size = UDim2.new(1, -16, 1, 0),
-				TextXAlignment = Enum.TextXAlignment.Left,
-				Parent = themeBtn,
-			})
-	
-			themeBtn.MouseEnter:Connect(function() tween(themeBtn, TI, { BackgroundColor3 = Theme.ElementHover }) end)
-			themeBtn.MouseLeave:Connect(function() tween(themeBtn, TI, { BackgroundColor3 = Theme.Element }) end)
-			themeBtn.Activated:Connect(function()
-				Window:SetTheme(themeName)
-			end)
-		end
-	
-		-- 2. Toggle Keybind Setting
-		addMenuHeader("HOTKEY")
-	
-		local currentToggleKey = cfg.ToggleKey or Enum.KeyCode.RightShift
-		local bindingHotkey = false
-	
-		local keyBtn = create("TextButton", {
+	end
+
+	addMenuHeader("THEMES")
+
+	for _, themeName in ipairs(Library:GetThemes()) do
+		local themeBtn = create("TextButton", {
 			Text = "", AutoButtonColor = false,
 			BackgroundColor3 = Theme.Element,
-			Size = UDim2.new(1, 0, 0, 26),
+			Size = UDim2.new(1, 0, 0, 24),
 			BorderSizePixel = 0,
 			Parent = menuList,
 		})
-		corner(keyBtn, 4)
-		stroke(keyBtn, Theme.Stroke, STROKE_T)
-	
-		local keyLbl = create("TextLabel", {
+		corner(themeBtn, 4)
+		stroke(themeBtn, Theme.Stroke, STROKE_T)
+
+		local lbl = create("TextLabel", {
 			BackgroundTransparency = 1,
-			Text = "Toggle: " .. currentToggleKey.Name,
+			Text = themeName,
 			FontFace = FONT_MAIN,
 			TextColor3 = Theme.Text,
 			TextSize = 12,
-			Size = UDim2.new(1, 0, 1, 0),
-			Parent = keyBtn,
+			Position = UDim2.new(0, 8, 0, 0),
+			Size = UDim2.new(1, -16, 1, 0),
+			TextXAlignment = Enum.TextXAlignment.Left,
+			Parent = themeBtn,
 		})
-	
-		keyBtn.Activated:Connect(function()
-			if bindingHotkey then return end
-			bindingHotkey = true
-			keyLbl.Text = "Press key..."
-	
-			local conn
-			conn = UserInputService.InputBegan:Connect(function(inp, gp)
-				if gp then return end
-				if inp.UserInputType == Enum.UserInputType.Keyboard then
-					conn:Disconnect()
-					currentToggleKey = inp.KeyCode
-					bindingHotkey = false
-					keyLbl.Text = "Toggle: " .. currentToggleKey.Name
-	
-					if toggleConn then toggleConn:Disconnect() end
-					toggleConn = UserInputService.InputBegan:Connect(function(newInp, newGp)
-						if newGp then return end
-						if newInp.KeyCode == currentToggleKey then
-							hidden = not hidden
-							BG.Visible = not hidden
-						end
-					end)
-				end
-			end)
+
+		themeBtn.MouseEnter:Connect(function() tween(themeBtn, TI, { BackgroundColor3 = Theme.ElementHover }) end)
+		themeBtn.MouseLeave:Connect(function() tween(themeBtn, TI, { BackgroundColor3 = Theme.Element }) end)
+		themeBtn.Activated:Connect(function()
+			Window:SetTheme(themeName)
 		end)
-	
-		-- Open/Close Animation for Gear Button
-		local menuOpen = false
-		settingsBtn.Activated:Connect(function()
-			menuOpen = not menuOpen
-			if menuOpen then
-				settingsMenu.Visible = true
-			end
-			tween(settingsMenu, TI_S, { Size = UDim2.new(0, 180, 0, menuOpen and 185 or 0) })
-			if not menuOpen then
-				task.delay(0.18, function()
-					if not menuOpen then settingsMenu.Visible = false end
+	end
+
+	addMenuHeader("TOGGLE KEYBIND")
+
+	local currentToggleKey = cfg.ToggleKey or Enum.KeyCode.RightShift
+	local bindingHotkey = false
+
+	local keyBtn = create("TextButton", {
+		Text = "", AutoButtonColor = false,
+		BackgroundColor3 = Theme.Element,
+		Size = UDim2.new(1, 0, 0, 26),
+		BorderSizePixel = 0,
+		Parent = menuList,
+	})
+	corner(keyBtn, 4)
+	stroke(keyBtn, Theme.Stroke, STROKE_T)
+
+	local keyLbl = create("TextLabel", {
+		BackgroundTransparency = 1,
+		Text = "Key: " .. currentToggleKey.Name,
+		FontFace = FONT_MAIN,
+		TextColor3 = Theme.Text,
+		TextSize = 12,
+		Size = UDim2.new(1, 0, 1, 0),
+		Parent = keyBtn,
+	})
+
+	local toggleConn
+	keyBtn.Activated:Connect(function()
+		if bindingHotkey then return end
+		bindingHotkey = true
+		keyLbl.Text = "Press key..."
+
+		local conn
+		conn = UserInputService.InputBegan:Connect(function(inp, gp)
+			if gp then return end
+			if inp.UserInputType == Enum.UserInputType.Keyboard then
+				conn:Disconnect()
+				currentToggleKey = inp.KeyCode
+				bindingHotkey = false
+				keyLbl.Text = "Key: " .. currentToggleKey.Name
+
+				if toggleConn then toggleConn:Disconnect() end
+				toggleConn = UserInputService.InputBegan:Connect(function(newInp, newGp)
+					if newGp then return end
+					if newInp.KeyCode == currentToggleKey then
+						hidden = not hidden
+						BG.Visible = not hidden
+					end
 				end)
 			end
 		end)
+	end)
+
+	local menuOpen = false
+	settingsBtn.Activated:Connect(function()
+		menuOpen = not menuOpen
+		if menuOpen then settingsMenu.Visible = true end
+		tween(settingsMenu, TI_S, { Size = UDim2.new(0, 180, 0, menuOpen and 220 or 0) })
+		if not menuOpen then
+			task.delay(0.18, function()
+				if not menuOpen then settingsMenu.Visible = false end
+			end)
+		end
+	end)
 
 	-- Body
 	local Body = create("Frame", {
@@ -821,7 +798,7 @@ function Library:CreateWindow(cfg)
 		Parent = BG,
 	})
 
-	-- Tab list (left)
+	-- Tab list
 	local TabList = create("ScrollingFrame", {
 		Name = "TabList", BackgroundColor3 = Theme.Secondary, BackgroundTransparency = 0.2,
 		BorderSizePixel = 0, Size = UDim2.new(0, 140, 1, 0),
@@ -833,14 +810,12 @@ function Library:CreateWindow(cfg)
 		create("UIPadding", { PaddingTop = UDim.new(0, 8), PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8) }),
 	})
 
-	-- Content (right)
 	local Content = create("Frame", {
 		Name = "Content", BackgroundTransparency = 1,
 		Position = UDim2.new(0, 141, 0, 0), Size = UDim2.new(1, -141, 1, 0),
 		Parent = Body,
 	})
 
-	-- Divider between sidebar and content
 	create("Frame", {
 		Name = "SideDivider", BackgroundColor3 = Theme.Stroke, BackgroundTransparency = STROKE_T,
 		BorderSizePixel = 0, Position = UDim2.new(0, 140, 0, 0), Size = UDim2.new(0, 1, 1, 0),
@@ -849,10 +824,7 @@ function Library:CreateWindow(cfg)
 
 	makeDraggable(BG, TopBar)
 
-	-- Close / minimize
-	-- Closing only removes this window (notifications / other windows stay).
 	local destroyed = false
-	local toggleConn
 	function Window:Destroy()
 		if destroyed then return end
 		destroyed = true
@@ -869,18 +841,17 @@ function Library:CreateWindow(cfg)
 		minimized = not minimized
 		if minimized then
 			Body.Visible = false
-			tween(BG, TI_S, { Size = UDim2.fromOffset(532, 45) })
+			tween(BG, TI_S, { Size = UDim2.fromOffset(540, 45) })
 		else
-			tween(BG, TI_S, { Size = UDim2.fromOffset(532, 410) })
+			tween(BG, TI_S, { Size = UDim2.fromOffset(540, 420) })
 			task.wait(0.12); Body.Visible = true
 		end
 	end)
 
-	-- Toggle visibility keybind (desktop)
 	local hidden = false
 	toggleConn = UserInputService.InputBegan:Connect(function(inp, gp)
 		if gp then return end
-		if inp.KeyCode == (cfg.ToggleKey or Enum.KeyCode.RightShift) then
+		if inp.KeyCode == currentToggleKey then
 			hidden = not hidden
 			BG.Visible = not hidden
 		end
@@ -951,12 +922,13 @@ function Library:CreateWindow(cfg)
 		end
 
 		btn.MouseEnter:Connect(function()
-			if not pageWrap.Visible then tween(btn, TI, { BackgroundTransparency = 0.6 }) end
+			if Window._current ~= Tab then tween(btn, TI, { BackgroundTransparency = 0.6 }) end
 		end)
 		btn.MouseLeave:Connect(function()
-			if not pageWrap.Visible then tween(btn, TI, { BackgroundTransparency = 1 }) end
+			if Window._current ~= Tab then tween(btn, TI, { BackgroundTransparency = 1 }) end
 		end)
 		btn.Activated:Connect(select)
+		
 		scope:Bind(ic, "TextColor3", function(c) return Window._current == Tab and c.Accent or c.SubText end)
 		scope:Bind(nameLbl, "TextColor3", function(c) return Window._current == Tab and c.Text or c.SubText end)
 
@@ -964,7 +936,6 @@ function Library:CreateWindow(cfg)
 		table.insert(Window.Tabs, Tab)
 		if #Window.Tabs == 1 then select() end
 
-		-- shared row factory
 		local function newRow(height)
 			Tab._order += 1
 			local row = create("Frame", {
@@ -977,7 +948,7 @@ function Library:CreateWindow(cfg)
 		end
 
 		------------------------------------------------------------
-		-- 1. Label
+		-- Elements
 		------------------------------------------------------------
 		function Tab:CreateLabel(text)
 			Tab._order += 1
@@ -997,17 +968,11 @@ function Library:CreateWindow(cfg)
 			return { Set = function(_, t) lbl.Text = t end, Instance = row }
 		end
 
-		------------------------------------------------------------
-		-- 2. Warning
-		------------------------------------------------------------
 		function Tab:CreateWarning(text)
 			local row = newRow(0)
 			row.AutomaticSize = Enum.AutomaticSize.Y
 			scope:Bind(row, "BackgroundColor3", "WarningBg")
-			for _, s in row:GetChildren() do
-				if s:IsA("UIStroke") then scope:Bind(s, "Color", "Warning"); s.Transparency = 0.5 end
-			end
-			-- equal top/bottom padding => single-line text sits centered against the icon
+			
 			create("UIPadding", {
 				PaddingTop = UDim.new(0, 9), PaddingBottom = UDim.new(0, 9),
 				PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10), Parent = row,
@@ -1016,6 +981,7 @@ function Library:CreateWindow(cfg)
 			ico.AnchorPoint = Vector2.new(0, 0.5)
 			ico.Position = UDim2.new(0, 0, 0.5, 0)
 			ico.Parent = row
+			
 			local lbl = create("TextLabel", {
 				BackgroundTransparency = 1, Text = text or "Warning",
 				FontFace = FONT_MAIN, TextColor3 = Theme.Warning, TextSize = 14,
@@ -1026,9 +992,6 @@ function Library:CreateWindow(cfg)
 			return { Set = function(_, t) lbl.Text = t end, Instance = row }
 		end
 
-		------------------------------------------------------------
-		-- 3. Button
-		------------------------------------------------------------
 		function Tab:CreateButton(bcfg)
 			bcfg = bcfg or {}
 			Tab._order += 1
@@ -1036,31 +999,33 @@ function Library:CreateWindow(cfg)
 				Text = "", AutoButtonColor = false, BackgroundColor3 = Theme.Element,
 				Size = UDim2.new(1, 0, 0, 36), LayoutOrder = Tab._order, BorderSizePixel = 0, Parent = page,
 			})
-			corner(btnEl, 6); stroke(btnEl, Theme.Stroke, STROKE_T)
-			create("TextLabel", {
+			corner(btnEl, 6)
+			stroke(btnEl, Theme.Stroke, STROKE_T)
+			
+			local txtLbl = create("TextLabel", {
 				BackgroundTransparency = 1, Text = bcfg.Name or "Button",
 				FontFace = FONT_MAIN, TextColor3 = Theme.Text, TextSize = 14,
 				Size = UDim2.new(1, 0, 1, 0), Parent = btnEl,
 			})
+			
 			btnEl.MouseEnter:Connect(function() tween(btnEl, TI, { BackgroundColor3 = Theme.ElementHover }) end)
 			btnEl.MouseLeave:Connect(function() tween(btnEl, TI, { BackgroundColor3 = Theme.Element }) end)
 			btnEl.Activated:Connect(function()
 				tween(btnEl, TI, { BackgroundColor3 = Theme.Accent })
-				task.wait(0.12); tween(btnEl, TI, { BackgroundColor3 = Theme.Element })
+				task.wait(0.12)
+				tween(btnEl, TI, { BackgroundColor3 = Theme.Element })
 				if bcfg.Callback then task.spawn(bcfg.Callback) end
 			end)
 			return { Instance = btnEl }
 		end
 
-		------------------------------------------------------------
-		-- 4. Toggle
-		------------------------------------------------------------
 		function Tab:CreateToggle(tocfg)
 			tocfg = tocfg or {}
 			local state = tocfg.Default or false
 			local row = newRow(36)
 			local btnEl = create("TextButton", { Text = "", BackgroundTransparency = 1, Size = UDim2.new(1, 0, 1, 0), Parent = row })
-			create("TextLabel", {
+			
+			local title = create("TextLabel", {
 				BackgroundTransparency = 1, Text = tocfg.Name or "Toggle",
 				FontFace = FONT_MAIN, TextColor3 = Theme.Text, TextSize = 14,
 				TextXAlignment = Enum.TextXAlignment.Left, AnchorPoint = Vector2.new(0, 0.5),
@@ -1072,7 +1037,9 @@ function Library:CreateWindow(cfg)
 				Size = UDim2.fromOffset(40, 20), BorderSizePixel = 0, Parent = btnEl,
 			})
 			corner(track, 10)
+			
 			scope:Bind(track, "BackgroundColor3", function(c) return state and c.Accent or c.Off end)
+			
 			local knob = create("Frame", {
 				BackgroundColor3 = Theme.Knob, AnchorPoint = Vector2.new(0, 0.5),
 				Position = state and UDim2.new(1, -18, 0.5, 0) or UDim2.new(0, 2, 0.5, 0),
@@ -1094,9 +1061,6 @@ function Library:CreateWindow(cfg)
 			return api
 		end
 
-		------------------------------------------------------------
-		-- 5. Stat / Status
-		------------------------------------------------------------
 		function Tab:CreateStat(scfg)
 			scfg = scfg or {}
 			local row = newRow(34)
@@ -1116,9 +1080,6 @@ function Library:CreateWindow(cfg)
 			return { Set = function(_, v) valLbl.Text = tostring(v) end, Instance = row }
 		end
 
-		------------------------------------------------------------
-		-- 6. Slider
-		------------------------------------------------------------
 		function Tab:CreateSlider(slcfg)
 			slcfg = slcfg or {}
 			local min, max = slcfg.Min or 0, slcfg.Max or 100
@@ -1144,11 +1105,13 @@ function Library:CreateWindow(cfg)
 				BorderSizePixel = 0, Parent = row,
 			})
 			corner(track, 3)
+			
 			local fill = create("Frame", {
 				BackgroundColor3 = Theme.Accent, Size = UDim2.new((value - min) / (max - min), 0, 1, 0),
 				BorderSizePixel = 0, Parent = track,
 			})
 			corner(fill, 3)
+			
 			local knob = create("Frame", {
 				BackgroundColor3 = Theme.Knob, AnchorPoint = Vector2.new(0.5, 0.5),
 				Position = UDim2.new((value - min) / (max - min), 0, 0.5, 0),
@@ -1173,9 +1136,6 @@ function Library:CreateWindow(cfg)
 			return api
 		end
 
-		------------------------------------------------------------
-		-- 7. Textbox
-		------------------------------------------------------------
 		function Tab:CreateTextbox(txcfg)
 			txcfg = txcfg or {}
 			local row = newRow(36)
@@ -1185,7 +1145,6 @@ function Library:CreateWindow(cfg)
 				TextXAlignment = Enum.TextXAlignment.Left, AnchorPoint = Vector2.new(0, 0.5),
 				Position = UDim2.new(0, 10, 0.5, 0), Size = UDim2.new(0.4, -10, 1, 0), Parent = row,
 			})
-			-- wrapper hugs the textbox; textbox grows with text but is clamped so it can't overlap the label
 			local boxWrap = create("Frame", {
 				BackgroundColor3 = Theme.Secondary, AnchorPoint = Vector2.new(1, 0.5),
 				Position = UDim2.new(1, -8, 0.5, 0), Size = UDim2.new(0, 0, 0, 24),
@@ -1220,9 +1179,6 @@ function Library:CreateWindow(cfg)
 			}
 		end
 
-		------------------------------------------------------------
-		-- 8. Color Picker (inline HSV, expands the row)
-		------------------------------------------------------------
 		function Tab:CreateColorPicker(ccfg)
 			ccfg = ccfg or {}
 			local color = ccfg.Default or Color3.fromRGB(255, 0, 0)
@@ -1250,7 +1206,6 @@ function Library:CreateWindow(cfg)
 			})
 			create("UIPadding", { PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10), PaddingBottom = UDim.new(0, 10), Parent = body })
 
-			-- SV square
 			local sv = create("Frame", {
 				BackgroundColor3 = Color3.fromHSV(h, 1, 1), Size = UDim2.new(1, -34, 1, 0),
 				BorderSizePixel = 0, Parent = body,
@@ -1271,7 +1226,6 @@ function Library:CreateWindow(cfg)
 			})
 			corner(svCursor, 4); stroke(svCursor, Color3.new(0,0,0), 0.2)
 
-			-- Hue bar
 			local hue = create("Frame", {
 				AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 0),
 				Size = UDim2.new(0, 22, 1, 0), BorderSizePixel = 0, Parent = body,
@@ -1323,9 +1277,6 @@ function Library:CreateWindow(cfg)
 			return api
 		end
 
-		------------------------------------------------------------
-		-- 9. Dropdown (single or multi, inline expand)
-		------------------------------------------------------------
 		function Tab:CreateDropdown(dcfg)
 			dcfg = dcfg or {}
 			local options = dcfg.Options or {}
@@ -1477,14 +1428,12 @@ function Library:CreateWindow(cfg)
 end
 
 ----------------------------------------------------------------------
--- Theme API
+-- Public Theme API
 ----------------------------------------------------------------------
-Library.Theme = GlobalScope.colors -- live, resolved global theme (read-only by convention)
+Library.Theme = GlobalScope.colors
 Library.DefaultTheme = cloneTheme(DefaultTheme)
 Library.Themes = Themes
 
--- Library:RegisterTheme("Mine", { Accent = ..., Background = ... })
--- Missing keys fall back to the default (Dark) value.
 function Library:RegisterTheme(name, theme)
 	if type(name) ~= "string" or type(theme) ~= "table" then return false end
 	Themes[name] = applyTheme(DefaultTheme, theme)
@@ -1526,7 +1475,6 @@ function Library:OnThemeChanged(fn)
 	return GlobalScope:Connect(fn)
 end
 
--- Remove everything (all windows + notifications).
 function Library:Destroy()
 	for _, n in table.clone(activeNotifs) do n:Dismiss() end
 	table.clear(Library._windows)
