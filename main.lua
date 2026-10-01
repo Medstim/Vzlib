@@ -284,12 +284,21 @@ local function corner(parent, r)
 end
 
 local function stroke(parent, color, trans, thick)
-	return create("UIStroke", {
-		Color = color or GlobalScope.refs.Stroke,
+	color = color or GlobalScope.refs.Stroke
+	local inst = create("UIStroke", {
 		Transparency = trans or STROKE_T,
 		Thickness = thick or 1,
 		Parent = parent,
 	})
+	
+	-- Bind color if it's a theme reference
+	if isRef(color) then
+		color.scope:Bind(inst, "Color", color.key)
+	else
+		inst.Color = color
+	end
+	
+	return inst
 end
 
 local function addShadow(parent, blur, trans)
@@ -1080,44 +1089,54 @@ function Library:CreateWindow(cfg)
 			return { Set = function(_, v) valLbl.Text = tostring(v) end, Instance = row }
 		end
 
-		function Tab:CreateSlider(slcfg)
-			slcfg = slcfg or {}
-			local min, max = slcfg.Min or 0, slcfg.Max or 100
-			local inc = slcfg.Increment or 1
-			local value = math.clamp(slcfg.Default or min, min, max)
-			local row = newRow(50)
+function Tab:CreateSlider(slcfg)
+	slcfg = slcfg or {}
+	local min, max = slcfg.Min or 0, slcfg.Max or 100
+	local inc = slcfg.Increment or 1
+	local value = math.clamp(slcfg.Default or min, min, max)
+	local row = newRow(50)
 
-			create("TextLabel", {
-				BackgroundTransparency = 1, Text = slcfg.Name or "Slider",
-				FontFace = FONT_MAIN, TextColor3 = Theme.Text, TextSize = 14,
-				TextXAlignment = Enum.TextXAlignment.Left, Position = UDim2.new(0, 10, 0, 6),
-				Size = UDim2.new(1, -70, 0, 16), Parent = row,
-			})
-			local valLbl = create("TextLabel", {
-				BackgroundTransparency = 1, Text = tostring(value),
-				FontFace = FONT_TITLE, TextColor3 = Theme.Accent, TextSize = 14,
-				TextXAlignment = Enum.TextXAlignment.Right, AnchorPoint = Vector2.new(1, 0),
-				Position = UDim2.new(1, -10, 0, 6), Size = UDim2.new(0, 60, 0, 16), Parent = row,
-			})
-			local track = create("Frame", {
-				BackgroundColor3 = Theme.Off, AnchorPoint = Vector2.new(0, 0.5),
-				Position = UDim2.new(0, 10, 1, -14), Size = UDim2.new(1, -20, 0, 6),
-				BorderSizePixel = 0, Parent = row,
-			})
-			corner(track, 3)
-			
-			local fill = create("Frame", {
-				BackgroundColor3 = Theme.Accent, Size = UDim2.new((value - min) / (max - min), 0, 1, 0),
-				BorderSizePixel = 0, Parent = track,
-			})
-			corner(fill, 3)
-			
-			local knob = create("Frame", {
-				BackgroundColor3 = Theme.Knob, AnchorPoint = Vector2.new(0.5, 0.5),
-				Position = UDim2.new((value - min) / (max - min), 0, 0.5, 0),
-				Size = UDim2.fromOffset(14, 14), BorderSizePixel = 0, ZIndex = 2, Parent = track,
-			})
-			corner(knob, 7)
+	create("TextLabel", {
+		BackgroundTransparency = 1, Text = slcfg.Name or "Slider",
+		FontFace = FONT_MAIN, TextColor3 = Theme.Text, TextSize = 14,
+		TextXAlignment = Enum.TextXAlignment.Left, Position = UDim2.new(0, 10, 0, 6),
+		Size = UDim2.new(1, -70, 0, 16), Parent = row,
+	})
+
+	local valLbl = create("TextLabel", {
+		BackgroundTransparency = 1, Text = tostring(value),
+		FontFace = FONT_TITLE, TextColor3 = Theme.Accent, TextSize = 14,
+		TextXAlignment = Enum.TextXAlignment.Right, AnchorPoint = Vector2.new(1, 0),
+		Position = UDim2.new(1, -10, 0, 6), Size = UDim2.new(0, 60, 0, 16), Parent = row,
+	})
+	-- FIX: Bind Value Label TextColor3
+	scope:Bind(valLbl, "TextColor3", "Accent")
+
+	local track = create("Frame", {
+		BackgroundColor3 = Theme.Off, AnchorPoint = Vector2.new(0, 0.5),
+		Position = UDim2.new(0, 10, 1, -14), Size = UDim2.new(1, -20, 0, 6),
+		BorderSizePixel = 0, Parent = row,
+	})
+	corner(track, 3)
+	-- FIX: Bind Slider Track Background Color
+	scope:Bind(track, "BackgroundColor3", "Off")
+	
+	local fill = create("Frame", {
+		BackgroundColor3 = Theme.Accent, Size = UDim2.new((value - min) / (max - min), 0, 1, 0),
+		BorderSizePixel = 0, Parent = track,
+	})
+	corner(fill, 3)
+	-- FIX: Bind Slider Fill Background Color
+	scope:Bind(fill, "BackgroundColor3", "Accent")
+	
+	local knob = create("Frame", {
+		BackgroundColor3 = Theme.Knob, AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.new((value - min) / (max - min), 0, 0.5, 0),
+		Size = UDim2.fromOffset(14, 14), BorderSizePixel = 0, ZIndex = 2, Parent = track,
+	})
+	corner(knob, 7)
+	-- FIX: Bind Knob Color
+	scope:Bind(knob, "BackgroundColor3", "Knob")
 
 			local api = {}
 			local function apply(alpha, fire)
