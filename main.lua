@@ -566,9 +566,6 @@ end
 function Library:CreateWindow(cfg)
 	cfg = cfg or {}
 
-	-- Every window owns a theme scope seeded from the library's global theme.
-	-- Keys set via cfg.Theme / cfg.Accent / Window:SetTheme are "overrides":
-	-- Library:SetTheme will not touch them.
 	local scope = newScope(GlobalScope.colors)
 	local overrides = {}
 
@@ -683,7 +680,6 @@ function Library:CreateWindow(cfg)
 		create("UIStroke", { Color = Theme.Stroke, Transparency = 0.5 }),
 		create("UICorner", { CornerRadius = UDim.new(0, 6) })
 	})
-
 
 	-- Body
 	local Body = create("Frame", {
