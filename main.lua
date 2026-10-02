@@ -455,33 +455,49 @@ function Library:Notify(cfg, scope)
 
 	notifCounter += 1
 	local wrapper = create("Frame", {
-		Name = "Notification", BackgroundTransparency = 1,
-		Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y,
-		LayoutOrder = notifCounter, Parent = NotifHolder,
+		Name = "Notification", 
+		BackgroundTransparency = 1,
+		Size = UDim2.new(1, 0, 0, 0), 
+		AutomaticSize = Enum.AutomaticSize.Y,
+		LayoutOrder = notifCounter, 
+		Parent = NotifHolder,
 	})
+
+	-- FIX: Set Size to UDim2.new(1, 0, 0, 1) or UDim2.fromScale(1, 0) for CanvasGroup
 	local card = create("CanvasGroup", {
-		BackgroundColor3 = Theme.Secondary, GroupTransparency = 1, Active = true,
-		Position = UDim2.new(0, 32, 0, 0), Size = UDim2.new(1, 0, 0, 0),
-		AutomaticSize = Enum.AutomaticSize.Y, Parent = wrapper,
+		BackgroundColor3 = Theme.Secondary, 
+		GroupTransparency = 1, 
+		Active = true,
+		Position = UDim2.new(0, 32, 0, 0), 
+		Size = UDim2.new(1, 0, 0, 1),
+		AutomaticSize = Enum.AutomaticSize.Y, 
+		Parent = wrapper,
 	})
 	corner(card, 8)
 	stroke(card, Theme.Stroke, STROKE_T)
 
 	create("Frame", {
-		BackgroundColor3 = tint, BorderSizePixel = 0,
-		Size = UDim2.new(0, 3, 1, 0), Parent = card,
+		BackgroundColor3 = tint, 
+		BorderSizePixel = 0,
+		Size = UDim2.new(0, 3, 1, 0), 
+		ZIndex = 2,
+		Parent = card,
 	})
 
 	local padLeft = iconName and 40 or 16
 	if iconName then
 		local ic = icon(iconName, 18, false, tint)
 		ic.Position = UDim2.fromOffset(15, 11)
+		ic.ZIndex = 2
 		ic.Parent = card
 	end
 
 	local content = create("Frame", {
-		BackgroundTransparency = 1, Position = UDim2.new(0, padLeft, 0, 0),
-		Size = UDim2.new(1, -(padLeft + 12), 0, 0), AutomaticSize = Enum.AutomaticSize.Y,
+		BackgroundTransparency = 1, 
+		Position = UDim2.new(0, padLeft, 0, 0),
+		Size = UDim2.new(1, -(padLeft + 12), 0, 0), 
+		AutomaticSize = Enum.AutomaticSize.Y,
+		ZIndex = 2,
 		Parent = card,
 	}, {
 		create("UIListLayout", { Padding = UDim.new(0, 3), SortOrder = Enum.SortOrder.LayoutOrder }),
@@ -489,26 +505,45 @@ function Library:Notify(cfg, scope)
 	})
 
 	local titleLbl = create("TextLabel", {
-		BackgroundTransparency = 1, Text = cfg.Title or cfg.Type or "Notification",
-		FontFace = FONT_TITLE, TextColor3 = Theme.Text, TextSize = 14,
-		TextXAlignment = Enum.TextXAlignment.Left, TextWrapped = true,
-		Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y,
-		LayoutOrder = 1, Parent = content,
+		BackgroundTransparency = 1, 
+		Text = cfg.Title or cfg.Type or "Notification",
+		FontFace = FONT_TITLE, 
+		TextColor3 = Theme.Text, 
+		TextSize = 14,
+		TextXAlignment = Enum.TextXAlignment.Left, 
+		TextWrapped = true,
+		Size = UDim2.new(1, 0, 0, 0), 
+		AutomaticSize = Enum.AutomaticSize.Y,
+		LayoutOrder = 1, 
+		Parent = content,
 	})
+
 	local bodyLbl = create("TextLabel", {
-		BackgroundTransparency = 1, Text = cfg.Content or "", Visible = cfg.Content ~= nil,
-		FontFace = FONT_MAIN, TextColor3 = Theme.SubText, TextSize = 12,
-		TextXAlignment = Enum.TextXAlignment.Left, TextWrapped = true,
-		Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y,
-		LayoutOrder = 2, Parent = content,
+		BackgroundTransparency = 1, 
+		Text = cfg.Content or "", 
+		Visible = cfg.Content ~= nil and cfg.Content ~= "",
+		FontFace = FONT_MAIN, 
+		TextColor3 = Theme.SubText, 
+		TextSize = 12,
+		TextXAlignment = Enum.TextXAlignment.Left, 
+		TextWrapped = true,
+		Size = UDim2.new(1, 0, 0, 0), 
+		AutomaticSize = Enum.AutomaticSize.Y,
+		LayoutOrder = 2, 
+		Parent = content,
 	})
 
 	local bar
 	if timed then
 		bar = create("Frame", {
-			BackgroundColor3 = tint, BackgroundTransparency = 0.4, BorderSizePixel = 0,
-			AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 0, 1, 0),
-			Size = UDim2.new(1, 0, 0, 2), ZIndex = 2, Parent = card,
+			BackgroundColor3 = tint, 
+			BackgroundTransparency = 0.4, 
+			BorderSizePixel = 0,
+			AnchorPoint = Vector2.new(0, 1), 
+			Position = UDim2.new(0, 0, 1, 0),
+			Size = UDim2.new(1, 0, 0, 2), 
+			ZIndex = 3, 
+			Parent = card,
 		})
 	end
 
@@ -612,39 +647,89 @@ function Library:CreateWindow(cfg)
 	stroke(BG, Theme.Stroke, STROKE_T)
 	addShadow(BG, 24, 0.4)
 
-	-- Top bar
+----------------------------------------------------------------
+	-- TopBar Implementation
+	----------------------------------------------------------------
 	local TopBar = create("Frame", {
 		Name = "TopBar",
 		BackgroundColor3 = Theme.Secondary,
 		BackgroundTransparency = 0.05,
-		Size = UDim2.new(1, 0, 0, 45),
+		Size = UDim2.new(1, 0, 0, 42),
 		BorderSizePixel = 0,
-		ZIndex = 5,
+		ZIndex = 10,
 		Parent = BG,
 	})
-	stroke(TopBar, Theme.Stroke, STROKE_T)
-
-	local titleLbl = create("TextLabel", {
-		Name = "Title", Text = cfg.Title or "VaehzUI",
-		FontFace = FONT_TITLE, TextColor3 = Theme.Text, TextSize = 16,
-		TextXAlignment = Enum.TextXAlignment.Left, TextWrapped = true,
-		BackgroundTransparency = 1, AnchorPoint = Vector2.new(0, 0.5),
-		Position = UDim2.new(0, 16, 0.5, 0), Size = UDim2.new(0, 300, 0, 22),
+	
+	-- Bottom divider line for TopBar separation
+	create("Frame", {
+		Name = "TopBarDivider",
+		BackgroundColor3 = Theme.Stroke,
+		BackgroundTransparency = STROKE_T,
+		BorderSizePixel = 0,
+		Position = UDim2.new(0, 0, 1, -1),
+		Size = UDim2.new(1, 0, 0, 1),
+		ZIndex = 11,
 		Parent = TopBar,
 	})
 
+	-- Left Header Container (Logo + Title)
+	local headerContainer = create("Frame", {
+		Name = "HeaderContainer",
+		BackgroundTransparency = 1,
+		Position = UDim2.new(0, 12, 0, 0),
+		Size = UDim2.new(1, -140, 1, 0),
+		ZIndex = 11,
+		Parent = TopBar,
+	}, {
+		create("UIListLayout", {
+			FillDirection = Enum.FillDirection.Horizontal,
+			VerticalAlignment = Enum.VerticalAlignment.Center,
+			Padding = UDim.new(0, 8),
+			SortOrder = Enum.SortOrder.LayoutOrder,
+		}),
+	})
+
+	if cfg.Icon then
+		local topIcon = icon(cfg.Icon, 18, false, Theme.Accent)
+		topIcon.LayoutOrder = 1
+		topIcon.Parent = headerContainer
+	end
+
+	local titleLbl = create("TextLabel", {
+		Name = "Title",
+		Text = cfg.Title or "VaehzUI",
+		FontFace = FONT_TITLE,
+		TextColor3 = Theme.Text,
+		TextSize = 15,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		TextTruncate = Enum.TextTruncate.AtEnd,
+		BackgroundTransparency = 1,
+		Size = UDim2.new(1, cfg.Icon and -26 or 0, 1, 0),
+		LayoutOrder = 2,
+		Parent = headerContainer,
+	})
+
+	-- Window Control Button Builder
 	local function ctrlBtn(iconName, offsetX, hoverColorKey)
 		local b = create("TextButton", {
-			Text = "", AutoButtonColor = false, BackgroundColor3 = Theme.Element,
-			BackgroundTransparency = 1, AnchorPoint = Vector2.new(1, 0.5),
-			Position = UDim2.new(1, offsetX, 0.5, 0), Size = UDim2.fromOffset(26, 26),
+			Text = "",
+			AutoButtonColor = false,
+			BackgroundColor3 = Theme.Element,
+			BackgroundTransparency = 1,
+			AnchorPoint = Vector2.new(1, 0.5),
+			Position = UDim2.new(1, offsetX, 0.5, 0),
+			Size = UDim2.fromOffset(28, 28),
+			ZIndex = 12,
 			Parent = TopBar,
 		})
 		corner(b, 6)
+
 		local ic = icon(iconName, 16, false, Theme.SubText)
 		ic.AnchorPoint = Vector2.new(0.5, 0.5)
 		ic.Position = UDim2.new(0.5, 0, 0.5, 0)
+		ic.ZIndex = 13
 		ic.Parent = b
+
 		b.MouseEnter:Connect(function()
 			tween(b, TI, { BackgroundTransparency = 0 })
 			tween(ic, TI, { TextColor3 = hoverColorKey and Theme[hoverColorKey] or Theme.Text })
@@ -656,25 +741,25 @@ function Library:CreateWindow(cfg)
 		return b
 	end
 
-	local CloseBtn = ctrlBtn("x", -10, "Error")
-	local MinBtn   = ctrlBtn("minus", -42, "Text")
+	local CloseBtn    = ctrlBtn("x", -10, "Error")
+	local MinBtn      = ctrlBtn("minus", -42, "Text")
 	local settingsBtn = ctrlBtn("gear", -74, "Text")
 
 	----------------------------------------------------------------
-	-- Permanent TopBar Settings Flyout
+	-- Improved Settings Flyout Dropdown
 	----------------------------------------------------------------
 	local settingsMenu = create("CanvasGroup", {
 		Name = "SettingsMenu",
 		BackgroundColor3 = Theme.Secondary,
-		BackgroundTransparency = 0.05,
+		GroupTransparency = 1,
 		Position = UDim2.new(1, -190, 1, 6),
 		Size = UDim2.new(0, 180, 0, 0),
 		ClipsDescendants = true,
 		Visible = false,
-		ZIndex = 10,
+		ZIndex = 20,
 		Parent = TopBar,
 	})
-	corner(settingsMenu, 6)
+	corner(settingsMenu, 8)
 	stroke(settingsMenu, Theme.Stroke, STROKE_T)
 
 	local menuList = create("ScrollingFrame", {
@@ -792,7 +877,12 @@ function Library:CreateWindow(cfg)
 	settingsBtn.Activated:Connect(function()
 		menuOpen = not menuOpen
 		if menuOpen then settingsMenu.Visible = true end
-		tween(settingsMenu, TI_S, { Size = UDim2.new(0, 180, 0, menuOpen and 220 or 0) })
+		
+		tween(settingsMenu, TI_S, { 
+			Size = UDim2.new(0, 180, 0, menuOpen and 220 or 0),
+			GroupTransparency = menuOpen and 0 or 1
+		})
+		
 		if not menuOpen then
 			task.delay(0.18, function()
 				if not menuOpen then settingsMenu.Visible = false end
@@ -803,7 +893,7 @@ function Library:CreateWindow(cfg)
 	-- Body
 	local Body = create("Frame", {
 		Name = "Body", BackgroundTransparency = 1,
-		Position = UDim2.new(0, 0, 0, 45), Size = UDim2.new(1, 0, 1, -45),
+		Position = UDim2.new(0, 0, 0, 45), Size = UDim2.new(1, 0, 1, -42),
 		Parent = BG,
 	})
 
