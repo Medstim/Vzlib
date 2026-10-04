@@ -927,7 +927,8 @@ function Library:CreateWindow(cfg)
 				currentToggleKey = inp.KeyCode
 				bindingHotkey = false
 				keyLbl.Text = "Key: " .. currentToggleKey.Name
-
+				
+                local hidden = false
 				if toggleConn then toggleConn:Disconnect() end
 				toggleConn = UserInputService.InputBegan:Connect(function(newInp, newGp)
 					if newGp then return end
@@ -1030,6 +1031,8 @@ function Library:CreateWindow(cfg)
 	function Window:CreateTab(tcfg)
 		tcfg = tcfg or {}
 		local Tab = { _order = 0, _elements = {} }
+
+		local Theme = scope.refs
 
 		local btn = create("TextButton", {
 			Text = "", AutoButtonColor = false, BackgroundColor3 = Theme.Element,
@@ -1287,41 +1290,310 @@ function Library:CreateWindow(cfg)
 			return el
 		end
 
-		function Tab:CreateToggle(tocfg)
-			tocfg = tocfg or {}
-			local state = tocfg.Default or false
-			local el = newElement({ Kind = "Toggle", Class = "TextButton", Height = 36, Callback = tocfg.Callback })
-			local row = el.Instance
+function Tab:CreateToggle(tocfg)
+	tocfg = tocfg or {}
+	local state = tocfg.Default or false
+	local hasDesc = tocfg.Description ~= nil and tocfg.Description ~= ""
+	
+	-- If a description is provided, dynamically grow height via AutomaticSize
+	local el = newElement({ 
+		Kind = "Toggle", 
+		Class = "TextButton", 
+		Height = hasDesc and 0 or 36, 
+		AutoY = hasDesc,
+		Callback = tocfg.Callback 
+	})
+	local row = el.Instance
 
-			el:_addLabel({ Text = tocfg.Name or "Toggle" })
+	if hasDesc then
+		create("UIPadding", {
+			PaddingTop = UDim.new(0, 8),
+			PaddingBottom = UDim.new(0, 8),
+			PaddingLeft = UDim.new(0, 10),
+			PaddingRight = UDim.new(0, 10),
+			Parent = row,
+		})
+	end
 
-			local track = create("Frame", {
-				BackgroundColor3 = state and Theme.Accent or Theme.Off,
-				AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -10, 0.5, 0),
-				Size = UDim2.fromOffset(40, 20), BorderSizePixel = 0, Parent = row,
-			})
-			corner(track, 10)
-			scope:Bind(track, "BackgroundColor3", function(c) return state and c.Accent or c.Off end)
-
-			local knob = create("Frame", {
-				BackgroundColor3 = Theme.Knob, AnchorPoint = Vector2.new(0, 0.5),
-				Position = state and UDim2.new(1, -18, 0.5, 0) or UDim2.new(0, 2, 0.5, 0),
-				Size = UDim2.fromOffset(16, 16), BorderSizePixel = 0, Parent = track,
-			})
-			corner(knob, 8)
-
-			function el:Set(v)
-				state = v
-				tween(track, TI, { BackgroundColor3 = state and Theme.Accent or Theme.Off })
-				tween(knob, TI, { Position = state and UDim2.new(1, -18, 0.5, 0) or UDim2.new(0, 2, 0.5, 0) })
-				self:_fire(state)
+	function Tab:CreateStatList(scfg)
+		scfg = scfg or {}
+		local el = newElement({ Kind = "StatList", Height = 36 })
+		local row = el.Instance
+		row.ClipsDescendants = true
+	
+		local header = create("TextButton", { 
+			Text = "", 
+			AutoButtonColor = false,
+			BackgroundTransparency = 1, 
+			Size = UDim2.new(1, 0, 0, 36), 
+			Parent = row 
+		})
+	
+		el:_addLabel({ Text = scfg.Name or "Info Dropdown", Size = UDim2.new(0.5, 0, 1, 0), Parent = header })
+	
+		local totalLbl = create("TextLabel", {
+			BackgroundTransparency = 1,
+			Text = "0 entries",
+			FontFace = FONT_MAIN,
+			TextColor3 = Theme.SubText,
+			TextSize = 13,
+			TextXAlignment = Enum.TextXAlignment.Right,
+			AnchorPoint = Vector2.new(1, 0.5),
+			Position = UDim2.new(1, -32, 0.5, 0),
+			Size = UDim2.new(0.5, -8, 1, 0),
+			Parent = header,
+		})
+	
+		local chev = icon("chevron-down", 16, false, Theme.SubText)
+		chev.AnchorPoint = Vector2.new(1, 0.5)
+		chev.Position = UDim2.new(1, -10, 0.5, 0)
+		chev.Parent = header
+	
+		local listContainer = create("Frame", {
+			BackgroundTransparency = 1,
+			Position = UDim2.new(0, 0, 0, 36),
+			Size = UDim2.new(1, 0, 0, 0),
+			AutomaticSize = Enum.AutomaticSize.Y,
+			Visible = false,
+			Parent = row,
+		}, {
+			create("UIListLayout", { Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder }),
+			create("UIPadding", { PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8), PaddingBottom = UDim.new(0, 8) }),
+		})
+	
+		local items = {}
+		local open = false
+	
+		local function openHeight()
+			if #listContainer:GetChildren() <= 2 then return 36 end
+			-- CanvasGroup / layout dynamic size calculation
+			local contentHeight = 0
+			for _, child in listContainer:GetChildren() do
+				if child:IsA("GuiObject") then
+					contentHeight += child.AbsoluteSize.Y + 4
+				end
 			end
-			function el:Get() return state end
-
-			row.Activated:Connect(function() el:Set(not state) end)
-			if state then el:_fire(true) end
-			return el
+			return 36 + contentHeight + 4
 		end
+	
+		local function updateSize()
+			if open then
+				task.defer(function()
+					tween(row, TI_S, { Size = UDim2.new(1, 0, 0, openHeight()) })
+				end)
+			end
+		end
+	
+		local function toggle(force)
+			if force ~= nil then open = force else open = not open end
+			if open then listContainer.Visible = true end
+			updateSize()
+			tween(chev, TI, { Rotation = open and 180 or 0 })
+			if not open then 
+				task.delay(0.12, function() if not open then listContainer.Visible = false end end) 
+			end
+		end
+	
+		header.Activated:Connect(function() toggle() end)
+		el._onLock = function() if open then toggle(false) end end
+	
+		local function updateHeaderSummary()
+			local count = 0
+			for _ in pairs(items) do count += 1 end
+			totalLbl.Text = count .. (count == 1 and " entry" or " entries")
+		end
+	
+		-- Unified API method to add Key-Value stats OR plain info notes
+		function el:Add(titleOrText, val, color)
+			local name = tostring(titleOrText)
+			local isValueStat = val ~= nil
+	
+			-- If item exists, update its value/text
+			if items[name] then
+				if isValueStat and items[name].valLbl then
+					items[name].valLbl.Text = tostring(val)
+					if color then items[name].valLbl.TextColor3 = color end
+				end
+				return items[name]
+			end
+	
+			local itemRow = create("Frame", {
+				BackgroundColor3 = Theme.Secondary,
+				Size = isValueStat and UDim2.new(1, 0, 0, 26) or UDim2.new(1, 0, 0, 0),
+				AutomaticSize = isValueStat and Enum.AutomaticSize.None or Enum.AutomaticSize.Y,
+				BorderSizePixel = 0,
+				Parent = listContainer,
+			})
+			corner(itemRow, 4)
+	
+			if not isValueStat then
+				-- Single full-width Info text block (supports auto-wrapping for long notes)
+				create("UIPadding", {
+					PaddingTop = UDim.new(0, 6),
+					PaddingBottom = UDim.new(0, 6),
+					PaddingLeft = UDim.new(0, 8),
+					PaddingRight = UDim.new(0, 8),
+					Parent = itemRow,
+				})
+	
+				local infoLbl = create("TextLabel", {
+					BackgroundTransparency = 1,
+					Text = name,
+					FontFace = FONT_MAIN,
+					TextColor3 = color or Theme.SubText,
+					TextSize = 12,
+					TextXAlignment = Enum.TextXAlignment.Left,
+					TextWrapped = true,
+					Size = UDim2.new(1, 0, 0, 0),
+					AutomaticSize = Enum.AutomaticSize.Y,
+					Parent = itemRow,
+				})
+				items[name] = { frame = itemRow, infoLbl = infoLbl }
+			else
+				-- Stat Row (Title + Value aligned right)
+				local nameLbl = create("TextLabel", {
+					BackgroundTransparency = 1,
+					Text = name,
+					FontFace = FONT_MAIN,
+					TextColor3 = Theme.Text,
+					TextSize = 13,
+					TextXAlignment = Enum.TextXAlignment.Left,
+					TextTruncate = Enum.TextTruncate.AtEnd,
+					Position = UDim2.new(0, 8, 0, 0),
+					Size = UDim2.new(0.55, -8, 1, 0),
+					Parent = itemRow,
+				})
+	
+				local valLbl = create("TextLabel", {
+					BackgroundTransparency = 1,
+					Text = tostring(val),
+					FontFace = FONT_TITLE,
+					TextColor3 = color or Theme.Accent,
+					TextSize = 13,
+					TextXAlignment = Enum.TextXAlignment.Right,
+					TextTruncate = Enum.TextTruncate.AtEnd,
+					AnchorPoint = Vector2.new(1, 0),
+					Position = UDim2.new(1, -8, 0, 0),
+					Size = UDim2.new(0.45, -8, 1, 0),
+					Parent = itemRow,
+				})
+	
+				items[name] = { frame = itemRow, nameLbl = nameLbl, valLbl = valLbl }
+			end
+	
+			updateHeaderSummary()
+			updateSize()
+			return items[name]
+		end
+	
+		-- Alias method for backwards compatibility
+		function el:Stat(name, val, color)
+			return el:Add(name, val, color)
+		end
+	
+		-- Remove entry
+		function el:Remove(name)
+			if items[name] then
+				items[name].frame:Destroy()
+				items[name] = nil
+				updateHeaderSummary()
+				updateSize()
+			end
+		end
+	
+		-- Clear all entries
+		function el:Clear()
+			for _, data in pairs(items) do
+				data.frame:Destroy()
+			end
+			table.clear(items)
+			updateHeaderSummary()
+			updateSize()
+		end
+	
+		return el
+	end
+
+	-- Text Container (Title + Optional Description)
+	local textContainer = create("Frame", {
+		BackgroundTransparency = 1,
+		Position = UDim2.new(0, hasDesc and 0 or 10, 0, 0),
+		Size = UDim2.new(1, -55, 1, 0),
+		AutomaticSize = hasDesc and Enum.AutomaticSize.Y or Enum.AutomaticSize.None,
+		Parent = row,
+	}, {
+		create("UIListLayout", {
+			Padding = UDim.new(0, 2),
+			SortOrder = Enum.SortOrder.LayoutOrder,
+			VerticalAlignment = Enum.VerticalAlignment.Center,
+		}),
+	})
+
+	local titleLbl = create("TextLabel", {
+		BackgroundTransparency = 1,
+		Text = tocfg.Name or "Toggle",
+		FontFace = FONT_MAIN,
+		TextColor3 = Theme.Text,
+		TextSize = 14,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		TextWrapped = true,
+		Size = UDim2.new(1, 0, 0, 0),
+		AutomaticSize = Enum.AutomaticSize.Y,
+		LayoutOrder = 1,
+		Parent = textContainer,
+	})
+	el._label = titleLbl
+
+	if hasDesc then
+		create("TextLabel", {
+			BackgroundTransparency = 1,
+			Text = tocfg.Description,
+			FontFace = FONT_MAIN,
+			TextColor3 = Theme.SubText,
+			TextSize = 12,
+			TextXAlignment = Enum.TextXAlignment.Left,
+			TextWrapped = true,
+			Size = UDim2.new(1, 0, 0, 0),
+			AutomaticSize = Enum.AutomaticSize.Y,
+			LayoutOrder = 2,
+			Parent = textContainer,
+		})
+	end
+
+	-- Toggle Switch Track
+	local track = create("Frame", {
+		BackgroundColor3 = state and Theme.Accent or Theme.Off,
+		AnchorPoint = Vector2.new(1, 0.5),
+		Position = UDim2.new(1, hasDesc and 0 or -10, 0.5, 0),
+		Size = UDim2.fromOffset(40, 20),
+		BorderSizePixel = 0,
+		Parent = row,
+	})
+	corner(track, 10)
+	scope:Bind(track, "BackgroundColor3", function(c) return state and c.Accent or c.Off end)
+
+	local knob = create("Frame", {
+		BackgroundColor3 = Theme.Knob,
+		AnchorPoint = Vector2.new(0, 0.5),
+		Position = state and UDim2.new(1, -18, 0.5, 0) or UDim2.new(0, 2, 0.5, 0),
+		Size = UDim2.fromOffset(16, 16),
+		BorderSizePixel = 0,
+		Parent = track,
+	})
+	corner(knob, 8)
+
+	function el:Set(v)
+		state = v
+		tween(track, TI, { BackgroundColor3 = state and Theme.Accent or Theme.Off })
+		tween(knob, TI, { Position = state and UDim2.new(1, -18, 0.5, 0) or UDim2.new(0, 2, 0.5, 0) })
+		self:_fire(state)
+	end
+	function el:Get() return state end
+
+	row.Activated:Connect(function() el:Set(not state) end)
+	if state then el:_fire(true) end
+	return el
+end
 
 		function Tab:CreateStat(scfg)
 			scfg = scfg or {}
@@ -1682,6 +1954,7 @@ function Library:CreateWindow(cfg)
 	table.insert(Library._windows, Window)
 	return Window
 end
+
 
 ----------------------------------------------------------------------
 -- Public Theme API
