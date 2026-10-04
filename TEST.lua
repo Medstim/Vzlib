@@ -30,7 +30,7 @@ local DefaultTheme = {
 	StrokeDim = Color3.fromRGB(45, 45, 50),
 
 	Text = Color3.fromRGB(255, 255, 255),
-	SubText = Color3.fromRGB(105, 105, 124),
+	SubText = Color3.fromRGB(81, 100, 134),
 
 	Accent = Color3.fromRGB(0, 92, 240),
 	Success = Color3.fromRGB(90, 205, 130),
@@ -38,6 +38,7 @@ local DefaultTheme = {
 	WarningBg = Color3.fromRGB(40, 34, 20),
 	Error = Color3.fromRGB(255, 90, 90),
 }
+
 
 local function cloneTheme(source)
 	local theme = {}
@@ -78,15 +79,15 @@ local Themes = {
 	Light = applyTheme(DefaultTheme, {
 		Background = Color3.fromRGB(245, 246, 250),
 		Secondary = Color3.fromRGB(230, 233, 240),
-		Header = Color3.fromRGB(222, 227, 238),
-		Element = Color3.fromRGB(255, 255, 255),
-		ElementHover = Color3.fromRGB(238, 240, 246),
-		ElementPressed = Color3.fromRGB(225, 228, 238),
+		Header = Color3.fromRGB(146, 145, 145),
+		Element = Color3.fromRGB(146, 145, 145),
+		ElementHover = Color3.fromRGB(146, 145, 145),
+		ElementPressed = Color3.fromRGB(146, 145, 145),
 		Off = Color3.fromRGB(205, 210, 220),
 		Stroke = Color3.fromRGB(180, 185, 200),
 		StrokeDim = Color3.fromRGB(215, 220, 230),
-		Text = Color3.fromRGB(20, 22, 28),
-		SubText = Color3.fromRGB(90, 95, 110),
+		Text = Color3.fromRGB(66, 74, 99),
+		SubText = Color3.fromRGB(107, 141, 243),
 		Accent = Color3.fromRGB(45, 105, 225),
 		Success = Color3.fromRGB(30, 160, 90),
 		Warning = Color3.fromRGB(210, 130, 0),
@@ -121,9 +122,9 @@ local Themes = {
 		Off = Color3.fromRGB(50, 44, 96),
 		Stroke = Color3.fromRGB(140, 130, 230),
 		StrokeDim = Color3.fromRGB(56, 50, 110),
-		Text = Color3.fromRGB(222, 218, 255),
-		SubText = Color3.fromRGB(150, 144, 205),
-		Accent = Color3.fromRGB(140, 120, 255),
+		Text = Color3.fromRGB(196, 190, 255),
+		SubText = Color3.fromRGB(149, 139, 238),
+		Accent = Color3.fromRGB(110, 90, 226),
 		Success = Color3.fromRGB(90, 210, 150),
 		Error = Color3.fromRGB(255, 95, 110),
 	}),
@@ -1089,8 +1090,7 @@ local menuList = create("ScrollingFrame", {
 		})
 
 		-- Local time, refreshed once a minute on the minute
-		local use12h = cfg.TimeFormat == "12h"
-		local use24h = cfg.TimeFormat == "24h"
+		local use12h = (cfg.TimeFormat or "24h") == "12h"
 		local function currentTime()
 			return os.date(use24h and "%I:%M %p" or "%H:%M")
 		end
