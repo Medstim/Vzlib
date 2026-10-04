@@ -19,6 +19,10 @@ local DefaultTheme = {
 	Secondary = Color3.fromRGB(20, 20, 23),
 	Header = Color3.fromRGB(22, 22, 26),
 
+	BackgroundTransparency = 0.02,
+	HeaderTransparency = 0.05,
+	SidebarTransparency = 0.2,
+
 	Element = Color3.fromRGB(30, 30, 35),
 	ElementHover = Color3.fromRGB(40, 40, 47),
 	ElementPressed = Color3.fromRGB(50, 50, 59),
@@ -51,10 +55,11 @@ local function sanitizeTheme(input)
 	local clean = {}
 	if type(input) ~= "table" then return clean end
 	for key, value in pairs(input) do
-		if DefaultTheme[key] == nil then
+		local default = DefaultTheme[key]
+		if default == nil then
 			warn(("[VaehzUI] Unknown theme key '%s' ignored"):format(tostring(key)))
-		elseif typeof(value) ~= "Color3" then
-			warn(("[VaehzUI] Theme key '%s' must be a Color3 (got %s)"):format(tostring(key), typeof(value)))
+		elseif typeof(value) ~= typeof(default) then
+			warn(("[VaehzUI] Theme key '%s' must be a %s (got %s)"):format(tostring(key), typeof(default), typeof(value)))
 		else
 			clean[key] = value
 		end
@@ -103,6 +108,10 @@ local Themes = {
 		Background = Color3.fromRGB(7, 13, 23),
 		Secondary = Color3.fromRGB(14, 26, 43),
 		Header = Color3.fromRGB(13, 36, 60),
+
+		BackgroundTransparency = 0.25,
+		HeaderTransparency = 0.3,
+		SidebarTransparency = 0.45,		
 
 		Element = Color3.fromRGB(22, 42, 68),
 		ElementHover = Color3.fromRGB(32, 58, 92),
@@ -786,7 +795,7 @@ function Library:CreateWindow(cfg)
 		Position = UDim2.new(0.5, 0, 0.5, 0),
 		Size = UDim2.fromOffset(WIN_W, WIN_H),
 		BackgroundColor3 = Theme.Background,
-		BackgroundTransparency = 0.02,
+		BackgroundTransparency = Theme.BackgroundTransparency,
 		BorderSizePixel = 0,
 		Parent = ScreenGui,
 	})
@@ -800,7 +809,7 @@ function Library:CreateWindow(cfg)
 	local TopBar = create("Frame", {
 		Name = "TopBar",
 		BackgroundColor3 = Theme.Header,
-		BackgroundTransparency = 0.05,
+		BackgroundTransparency = Theme.HeaderTransparency,
 		Size = UDim2.new(1, 0, 0, 42),
 		BorderSizePixel = 0,
 		ZIndex = 10,
@@ -1053,7 +1062,7 @@ local menuList = create("ScrollingFrame", {
 
 	-- Tab list
 	local TabList = create("ScrollingFrame", {
-		Name = "TabList", BackgroundColor3 = Theme.Secondary, BackgroundTransparency = 0.2,
+		Name = "TabList", BackgroundColor3 = Theme.Secondary, BackgroundTransparency = Theme.SidebarTransparency,
 		BorderSizePixel = 0, Size = UDim2.new(0, SIDEBAR_W, 1, -PROFILE_H),
 		CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y,
 		ScrollBarThickness = 3, ScrollBarImageColor3 = Theme.Stroke, ScrollBarImageTransparency = 0.5,
@@ -1083,7 +1092,7 @@ local menuList = create("ScrollingFrame", {
 		local footer = create("Frame", {
 			Name = "Profile",
 			BackgroundColor3 = Theme.Secondary,
-			BackgroundTransparency = 0.2,
+			BackgroundTransparency = Theme.SidebarTransparency,
 			BorderSizePixel = 0,
 			Position = UDim2.new(0, 0, 1, -PROFILE_H),
 			Size = UDim2.new(0, SIDEBAR_W, 0, PROFILE_H),
