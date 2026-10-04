@@ -1317,10 +1317,15 @@ function Tab:CreateToggle(tocfg)
 
 function Tab:CreateStatList(scfg)
 	scfg = scfg or {}
-    local HEADER_H = 36
-    local OUTER = 8
-    local PAD_Y = 6
-    local ROW_H = 22
+
+	local TweenService = game:GetService("TweenService")
+	local TWEEN = TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+
+	local HEADER_H = 36
+	local OUTER = 8       -- gap between paper and element edges
+	local PAD_Y = 6       -- paper top/bottom padding
+	local ROW_H = 22
+	local NOTE_FONT = Font.fromEnum(Enum.Font.Code)
 
 	local el = newElement({ Kind = "StatList", Height = HEADER_H })
 	local row = el.Instance
@@ -1342,11 +1347,10 @@ function Tab:CreateStatList(scfg)
 		titleIcon.Parent = header
 	end
 
-	-- Title label built directly so the offsets are exact
 	local leftX = hasIcon and 34 or 12
 	create("TextLabel", {
 		BackgroundTransparency = 1,
-		Text = scfg.Name or "Info Dropdown",
+		Text = scfg.Name or "Notes",
 		FontFace = FONT_MAIN,
 		TextColor3 = Theme.Text,
 		TextSize = 14,
@@ -1365,57 +1369,52 @@ function Tab:CreateStatList(scfg)
 	chev.Rotation = 0
 	chev.Parent = header
 
+	-- The "paper"
 	local list = create("Frame", {
-		BackgroundTransparency = 1,
-		Position = UDim2.new(0, 0, 0, HEADER_H),
-		Size = UDim2.new(1, 0, 1, -HEADER_H),
+		BackgroundColor3 = Theme.Secondary,
+		BorderSizePixel = 0,
+		Position = UDim2.new(0, OUTER, 0, HEADER_H),
+		Size = UDim2.new(1, -OUTER * 2, 1, -(HEADER_H + OUTER)),
 		Visible = false,
+		ClipsDescendants = true,
 		Parent = row,
 	})
+	corner(list, 6)
 
 	create("UIListLayout", {
-		Padding = UDim.new(0, GAP),
+		Padding = UDim.new(0, 0),
 		SortOrder = Enum.SortOrder.LayoutOrder,
 		Parent = list,
 	})
 
 	create("UIPadding", {
-		PaddingLeft = UDim.new(0, 8),
-		PaddingRight = UDim.new(0, 8),
-		PaddingBottom = UDim.new(0, PAD_BOTTOM),
+		PaddingTop = UDim.new(0, PAD_Y),
+		PaddingBottom = UDim.new(0, PAD_Y),
+		PaddingLeft = UDim.new(0, 10),
+		PaddingRight = UDim.new(0, 10),
 		Parent = list,
 	})
 
 	local items = {}
-	local count = 0
 	local order = 0
 	local open = false
 
-	-- Height computed from the items themselves (no layout timing issues)
-local function openHeight()
-	local n = 0
-	for _ in pairs(items) do n += 1 end
-	return HEADER_H + math.max(n, 1) * ROW_H + PAD_Y * 2 + OUTER
-end
+	local function openHeight()
+		local n = 0
+		for _ in pairs(items) do n += 1 end
+		return HEADER_H + math.max(n, 1) * ROW_H + PAD_Y * 2 + OUTER
+	end
 
-local TweenService = game:GetService("TweenService")
-
-local function applySize()
-	local target = open and openHeight() or HEADER_H
-	el.Height = target -- in case newElement/your tab layout reads this
-	print("[StatList] target height:", target, "row parent:", row.Parent and row.Parent.Name)
-
-	TweenService:Create(
-		row,
-		TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-		{ Size = UDim2.new(1, 0, 0, target) }
-	):Play()
-end
+	local function applySize()
+		local target = open and openHeight() or HEADER_H
+		el.Height = target
+		TweenService:Create(row, TWEEN, { Size = UDim2.new(1, 0, 0, target) }):Play()
+	end
 
 	local function toggle(force)
 		if force ~= nil then open = force else open = not open end
 
-		tween(chev, TI_S, { Rotation = open and 180 or 0 })
+		TweenService:Create(chev, TWEEN, { Rotation = open and 180 or 0 }):Play()
 
 		if open then
 			list.Visible = true
@@ -1444,51 +1443,54 @@ end
 		end
 
 		order += 1
-		local itemHeight = isValueStat and 26 or 28
-		corner(itemRow, 4)
+		local line = create("Frame", {
+			BackgroundTransparency = 1,
+			Size = UDim2.new(1, 0, 0, ROW_H),
+			LayoutOrder = order,
+			Parent = list,
+		})
 
 		if not isValueStat then
 			local infoLbl = create("TextLabel", {
 				BackgroundTransparency = 1,
 				Text = name,
-				FontFace = FONT_MAIN,
+				FontFace = NOTE_FONT,
 				TextColor3 = color or Theme.SubText,
-				TextSize = 12,
+				TextSize = 13,
 				TextXAlignment = Enum.TextXAlignment.Left,
-				Position = UDim2.new(0, 8, 0, 0),
-				Size = UDim2.new(1, -16, 1, 0),
-				Parent = itemRow,
+				TextTruncate = Enum.TextTruncate.AtEnd,
+				Size = UDim2.new(1, 0, 1, 0),
+				Parent = line,
 			})
-			items[name] = { frame = itemRow, infoLbl = infoLbl }
+			items[name] = { frame = line, infoLbl = infoLbl }
 		else
 			local nameLbl = create("TextLabel", {
 				BackgroundTransparency = 1,
 				Text = name,
-				FontFace = FONT_MAIN,
-				TextColor3 = Theme.Text,
+				FontFace = NOTE_FONT,
+				TextColor3 = Theme.SubText,
 				TextSize = 13,
 				TextXAlignment = Enum.TextXAlignment.Left,
 				TextTruncate = Enum.TextTruncate.AtEnd,
-				Position = UDim2.new(0, 8, 0, 0),
-				Size = UDim2.new(0.55, -8, 1, 0),
-				Parent = itemRow,
+				Size = UDim2.new(0.55, 0, 1, 0),
+				Parent = line,
 			})
 
 			local valLbl = create("TextLabel", {
 				BackgroundTransparency = 1,
 				Text = tostring(val),
-				FontFace = FONT_TITLE,
-				TextColor3 = color or Theme.Accent,
+				FontFace = NOTE_FONT,
+				TextColor3 = color or Theme.Text,
 				TextSize = 13,
 				TextXAlignment = Enum.TextXAlignment.Right,
 				TextTruncate = Enum.TextTruncate.AtEnd,
 				AnchorPoint = Vector2.new(1, 0),
-				Position = UDim2.new(1, -8, 0, 0),
-				Size = UDim2.new(0.45, -8, 1, 0),
-				Parent = itemRow,
+				Position = UDim2.new(1, 0, 0, 0),
+				Size = UDim2.new(0.45, 0, 1, 0),
+				Parent = line,
 			})
 
-			items[name] = { frame = itemRow, nameLbl = nameLbl, valLbl = valLbl }
+			items[name] = { frame = line, nameLbl = nameLbl, valLbl = valLbl }
 		end
 
 		if open then applySize() end
