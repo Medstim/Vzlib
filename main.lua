@@ -15,28 +15,32 @@ local httpRequest = (syn and syn.request) or (http and http.request) or http_req
 ----------------------------------------------------------------------
 
 local DefaultTheme = {
-	Background = Color3.fromRGB(16, 16, 16),
-	Secondary = Color3.fromRGB(24, 24, 27),
-	Header = Color3.fromRGB(24, 24, 27),
+	Background = Color3.fromRGB(14, 14, 16),
+	Secondary = Color3.fromRGB(20, 20, 23),
+	Header = Color3.fromRGB(22, 22, 26),
 
-	Element = Color3.fromRGB(32, 32, 36),
-	ElementHover = Color3.fromRGB(42, 42, 48),
-	ElementPressed = Color3.fromRGB(50, 50, 58),
+	BackgroundTransparency = 0.02,
+	HeaderTransparency = 0.05,
+	SidebarTransparency = 0.2,
 
-	Off = Color3.fromRGB(50, 50, 55),
+	Element = Color3.fromRGB(30, 30, 35),
+	ElementHover = Color3.fromRGB(40, 40, 47),
+	ElementPressed = Color3.fromRGB(50, 50, 59),
+
+	Off = Color3.fromRGB(52, 52, 60),
 	Knob = Color3.fromRGB(255, 255, 255),
 
-	Stroke = Color3.fromRGB(70, 70, 78),
-	StrokeDim = Color3.fromRGB(45, 45, 50),
+	Stroke = Color3.fromRGB(72, 72, 82),
+	StrokeDim = Color3.fromRGB(42, 42, 48),
 
-	Text = Color3.fromRGB(255, 255, 255),
-	SubText = Color3.fromRGB(81, 100, 134),
+	Text = Color3.fromRGB(240, 240, 245),
+	SubText = Color3.fromRGB(128, 142, 172),
 
-	Accent = Color3.fromRGB(0, 92, 240),
-	Success = Color3.fromRGB(90, 205, 130),
+	Accent = Color3.fromRGB(50, 125, 255),
+	Success = Color3.fromRGB(80, 210, 130),
 	Warning = Color3.fromRGB(255, 190, 70),
-	WarningBg = Color3.fromRGB(40, 34, 20),
-	Error = Color3.fromRGB(255, 90, 90),
+	WarningBg = Color3.fromRGB(42, 35, 20),
+	Error = Color3.fromRGB(255, 95, 95),
 }
 
 local function cloneTheme(source)
@@ -51,10 +55,11 @@ local function sanitizeTheme(input)
 	local clean = {}
 	if type(input) ~= "table" then return clean end
 	for key, value in pairs(input) do
-		if DefaultTheme[key] == nil then
+		local default = DefaultTheme[key]
+		if default == nil then
 			warn(("[VaehzUI] Unknown theme key '%s' ignored"):format(tostring(key)))
-		elseif typeof(value) ~= "Color3" then
-			warn(("[VaehzUI] Theme key '%s' must be a Color3 (got %s)"):format(tostring(key), typeof(value)))
+		elseif typeof(value) ~= typeof(default) then
+			warn(("[VaehzUI] Theme key '%s' must be a %s (got %s)"):format(tostring(key), typeof(default), typeof(value)))
 		else
 			clean[key] = value
 		end
@@ -74,75 +79,108 @@ end
 local Themes = {
 	Dark = cloneTheme(DefaultTheme),
 
-	-- Improved Light Theme (Clean, high-contrast, modern slate accents)
 	Light = applyTheme(DefaultTheme, {
-		Background = Color3.fromRGB(245, 246, 250),
-		Secondary = Color3.fromRGB(230, 233, 240),
-		Header = Color3.fromRGB(179, 179, 179),
-		Element = Color3.fromRGB(179, 179, 179),
-		ElementHover = Color3.fromRGB(179, 179, 179),
-		ElementPressed = Color3.fromRGB(179, 179, 179),
-		Off = Color3.fromRGB(205, 210, 220),
-		Stroke = Color3.fromRGB(180, 185, 200),
-		StrokeDim = Color3.fromRGB(215, 220, 230),
-		Text = Color3.fromRGB(136, 162, 241),
-		SubText = Color3.fromRGB(101, 132, 224),
-		Accent = Color3.fromRGB(45, 105, 225),
-		Success = Color3.fromRGB(30, 160, 90),
-		Warning = Color3.fromRGB(210, 130, 0),
-		WarningBg = Color3.fromRGB(255, 242, 210),
-		Error = Color3.fromRGB(220, 50, 50),
+		Background = Color3.fromRGB(243, 244, 248),
+		Secondary = Color3.fromRGB(233, 236, 242),
+		Header = Color3.fromRGB(250, 251, 253),
+
+		Element = Color3.fromRGB(170, 169, 169),
+		ElementHover = Color3.fromRGB(180, 180, 180),
+		ElementPressed = Color3.fromRGB(166, 166, 167),
+
+		Off = Color3.fromRGB(139, 98, 98),
+		Knob = Color3.fromRGB(255, 255, 255),
+
+		Stroke = Color3.fromRGB(140, 150, 175),
+		StrokeDim = Color3.fromRGB(170, 178, 198),
+
+		Text = Color3.fromRGB(156, 190, 255),
+		SubText = Color3.fromRGB(92, 100, 122),
+
+		Accent = Color3.fromRGB(37, 99, 235),
+		Success = Color3.fromRGB(22, 150, 85),
+		Warning = Color3.fromRGB(200, 120, 0),
+		WarningBg = Color3.fromRGB(255, 243, 214),
+		Error = Color3.fromRGB(214, 48, 60),
 	}),
 
 	Glass = applyTheme(DefaultTheme, {
-		Background = Color3.fromRGB(8, 14, 24),
-		Secondary = Color3.fromRGB(16, 28, 46),
-		Header = Color3.fromRGB(14, 40, 66),
-		Element = Color3.fromRGB(24, 46, 74),
-		ElementHover = Color3.fromRGB(34, 62, 98),
-		ElementPressed = Color3.fromRGB(44, 78, 120),
-		Off = Color3.fromRGB(36, 56, 84),
-		Stroke = Color3.fromRGB(80, 140, 200),
-		StrokeDim = Color3.fromRGB(40, 76, 112),
-		Text = Color3.fromRGB(214, 238, 255),
-		SubText = Color3.fromRGB(130, 170, 205),
-		Accent = Color3.fromRGB(0, 195, 255),
-		Success = Color3.fromRGB(60, 230, 150),
-		Error = Color3.fromRGB(255, 80, 100),
+		Background = Color3.fromRGB(121, 128, 141),
+		Secondary = Color3.fromRGB(14, 26, 43),
+		Header = Color3.fromRGB(13, 36, 60),
+
+		BackgroundTransparency = 0.4,
+		HeaderTransparency = 0.2,
+		SidebarTransparency = 0.3,		
+
+		Element = Color3.fromRGB(22, 42, 68),
+		ElementHover = Color3.fromRGB(32, 58, 92),
+		ElementPressed = Color3.fromRGB(42, 74, 114),
+
+		Off = Color3.fromRGB(34, 54, 82),
+		Knob = Color3.fromRGB(255, 255, 255),
+
+		Stroke = Color3.fromRGB(78, 138, 198),
+		StrokeDim = Color3.fromRGB(38, 72, 108),
+
+		Text = Color3.fromRGB(220, 240, 255),
+		SubText = Color3.fromRGB(128, 168, 204),
+
+		Accent = Color3.fromRGB(0, 190, 255),
+		Success = Color3.fromRGB(60, 225, 150),
+		Warning = Color3.fromRGB(255, 196, 90),
+		WarningBg = Color3.fromRGB(38, 36, 26),
+		Error = Color3.fromRGB(255, 84, 104),
 	}),
-	
+
 	Midnight = applyTheme(DefaultTheme, {
-		Background = Color3.fromRGB(8, 8, 24),
-		Secondary = Color3.fromRGB(18, 16, 44),
-		Header = Color3.fromRGB(34, 28, 84),
-		Element = Color3.fromRGB(28, 24, 64),
-		ElementHover = Color3.fromRGB(40, 34, 88),
-		ElementPressed = Color3.fromRGB(52, 44, 108),
-		Off = Color3.fromRGB(50, 44, 96),
-		Stroke = Color3.fromRGB(140, 130, 230),
-		StrokeDim = Color3.fromRGB(56, 50, 110),
-		Text = Color3.fromRGB(196, 190, 255),
-		SubText = Color3.fromRGB(149, 139, 238),
-		Accent = Color3.fromRGB(110, 90, 226),
+		Background = Color3.fromRGB(8, 8, 22),
+		Secondary = Color3.fromRGB(16, 15, 40),
+		Header = Color3.fromRGB(30, 25, 76),
+
+		Element = Color3.fromRGB(26, 22, 60),
+		ElementHover = Color3.fromRGB(38, 32, 84),
+		ElementPressed = Color3.fromRGB(50, 42, 104),
+
+		Off = Color3.fromRGB(48, 42, 92),
+		Knob = Color3.fromRGB(255, 255, 255),
+
+		Stroke = Color3.fromRGB(132, 122, 224),
+		StrokeDim = Color3.fromRGB(54, 48, 106),
+
+		Text = Color3.fromRGB(214, 210, 255),
+		SubText = Color3.fromRGB(150, 142, 220),
+
+		Accent = Color3.fromRGB(140, 120, 255),
 		Success = Color3.fromRGB(90, 210, 150),
-		Error = Color3.fromRGB(255, 95, 110),
+		Warning = Color3.fromRGB(255, 190, 80),
+		WarningBg = Color3.fromRGB(42, 34, 28),
+		Error = Color3.fromRGB(255, 100, 115),
 	}),
-	
+
 	Rose = applyTheme(DefaultTheme, {
-		Background = Color3.fromRGB(22, 10, 16),
-		Secondary = Color3.fromRGB(40, 18, 28),
-		Header = Color3.fromRGB(74, 24, 48),
-		Element = Color3.fromRGB(52, 24, 38),
-		ElementHover = Color3.fromRGB(66, 32, 48),
-		ElementPressed = Color3.fromRGB(80, 40, 58),
-		Off = Color3.fromRGB(84, 48, 64),
-		Stroke = Color3.fromRGB(210, 120, 150),
-		StrokeDim = Color3.fromRGB(96, 50, 68),
-		Text = Color3.fromRGB(255, 222, 234),
-		SubText = Color3.fromRGB(206, 150, 170),
-		Accent = Color3.fromRGB(255, 105, 150),
+		Background = Color3.fromRGB(21, 10, 15),
+		Secondary = Color3.fromRGB(36, 17, 26),
+		Header = Color3.fromRGB(66, 22, 43),
+
+		Element = Color3.fromRGB(48, 23, 35),
+		ElementHover = Color3.fromRGB(62, 30, 45),
+		ElementPressed = Color3.fromRGB(76, 38, 55),
+
+		Off = Color3.fromRGB(80, 46, 62),
+		Knob = Color3.fromRGB(255, 255, 255),
+
+		Stroke = Color3.fromRGB(205, 118, 148),
+		StrokeDim = Color3.fromRGB(90, 48, 65),
+
+		Text = Color3.fromRGB(255, 228, 238),
+		SubText = Color3.fromRGB(206, 150, 172),
+
+		Accent = Color3.fromRGB(255, 110, 155),
 		Success = Color3.fromRGB(110, 215, 150),
-		Error = Color3.fromRGB(255, 110, 110),
+		Warning = Color3.fromRGB(255, 196, 100),
+		WarningBg = Color3.fromRGB(46, 32, 22),
+		Error = Color3.fromRGB(255, 100, 90),
 	}),
 }
 
@@ -180,7 +218,7 @@ Scope.__index = Scope
 local function newScope(base)
 	local scope = setmetatable({
 		colors = cloneTheme(base),
-		bindings = setmetatable({}, { __mode = "k" }),
+		bindings = {},
 		listeners = {},
 		_nextId = 0,
 	}, Scope)
@@ -209,35 +247,42 @@ function Scope:Bind(inst, prop, binding)
 	if not props then
 		props = {}
 		self.bindings[inst] = props
+		inst.Destroying:Connect(function() self.bindings[inst] = nil end)
 	end
 	props[prop] = binding
 	inst[prop] = evalBinding(self, binding)
 end
 
+function Scope:Update(inst, prop, info)
+	local binding = self.bindings[inst] and self.bindings[inst][prop]
+	if binding == nil then return end
+	local target = evalBinding(self, binding)
+	if target == nil then return end
+	if info then
+		TweenService:Create(inst, info, { [prop] = target }):Play()
+	else
+		inst[prop] = target
+	end
+end
+
 function Scope:Refresh(animate)
 	for inst, props in pairs(self.bindings) do
-		if inst and inst.Parent then
-			for prop, binding in pairs(props) do
-				local target = evalBinding(self, binding)
-				if target ~= nil then
-					pcall(function()
-						if animate then
-							TweenService:Create(inst, THEME_TI, { [prop] = target }):Play()
-						else
-							inst[prop] = target
-						end
-					end)
+		if inst.Parent == nil then
+			self.bindings[inst] = nil
+		else
+			for prop in pairs(props) do
+				local ok, err = pcall(self.Update, self, inst, prop, animate and THEME_TI or nil)
+				if not ok then
+					warn(("[VaehzUI] theme refresh failed: %s.%s (%s)"):format(inst:GetFullName(), prop, tostring(err)))
 				end
 			end
 		end
 	end
-	for _, fn in pairs(self.listeners) do
-		task.spawn(fn, self.colors)
-	end
+	for _, fn in pairs(self.listeners) do task.spawn(fn, self.colors) end
 end
 
-function Scope:Apply(patch, animate)
-	local changed = false
+function Scope:Apply(patch, animate, force)
+	local changed = force == true
 	for key, value in pairs(patch) do
 		if self.colors[key] ~= value then
 			self.colors[key] = value
@@ -325,6 +370,13 @@ local function tween(obj, info, props)
 	local t = TweenService:Create(obj, info or TI, resolved)
 	t:Play()
 	return t
+end
+
+local function hoverable(scope, trigger, inst, prop, normal, hover)
+	local hovered = false
+	scope:Bind(inst, prop, function(c) return hovered and c[hover] or c[normal] end)
+	trigger.MouseEnter:Connect(function() hovered = true;  scope:Update(inst, prop, TI) end)
+	trigger.MouseLeave:Connect(function() hovered = false; scope:Update(inst, prop, TI) end)
 end
 
 local function icon(name, size, filled, color)
@@ -453,6 +505,7 @@ local NotifHolder = create("Frame", {
 
 Library.MaxNotifications = 5
 Library._windows = {}
+Library._themeListeners = {}
 
 local NOTIFY_TYPES = {
 	Info    = { color = "Accent",  icon = "circle" },
@@ -717,19 +770,21 @@ function Library:CreateWindow(cfg)
 		for k in pairs(initial) do overrides[k] = true end
 		scope:Apply(initial, false)
 	end
-
+	local currentTheme = type(cfg.Theme) == "string" and cfg.Theme or nil
 	function Window:SetTheme(input, animate)
 		local patch = resolveThemeInput(input)
 		if not patch then return false end
 		for key in pairs(patch) do overrides[key] = true end
-		scope:Apply(patch, animate ~= false)
+		currentTheme = type(input) == "string" and input or nil
+		scope:Apply(patch, animate ~= false, true)
 		return true
 	end
 	function Window:GetTheme() return cloneTheme(scope.colors) end
 	function Window:SetAccent(color, animate) return Window:SetTheme({ Accent = color }, animate) end
 	function Window:ResetTheme(animate)
 		table.clear(overrides)
-		scope:Apply(GlobalScope.colors, animate ~= false)
+		currentTheme = nil
+		scope:Apply(GlobalScope.colors, animate ~= false, true)
 	end
 	function Window:OnThemeChanged(fn) return scope:Connect(fn) end
 	function Window:Notify(ncfg) return Library:Notify(ncfg, scope) end
@@ -740,7 +795,7 @@ function Library:CreateWindow(cfg)
 		Position = UDim2.new(0.5, 0, 0.5, 0),
 		Size = UDim2.fromOffset(WIN_W, WIN_H),
 		BackgroundColor3 = Theme.Background,
-		BackgroundTransparency = 0.02,
+		BackgroundTransparency = Theme.BackgroundTransparency,
 		BorderSizePixel = 0,
 		Parent = ScreenGui,
 	})
@@ -754,7 +809,7 @@ function Library:CreateWindow(cfg)
 	local TopBar = create("Frame", {
 		Name = "TopBar",
 		BackgroundColor3 = Theme.Header,
-		BackgroundTransparency = 0.05,
+		BackgroundTransparency = Theme.HeaderTransparency,
 		Size = UDim2.new(1, 0, 0, 42),
 		BorderSizePixel = 0,
 		ZIndex = 10,
@@ -764,7 +819,7 @@ function Library:CreateWindow(cfg)
 	-- Bottom divider line for TopBar separation
 	create("Frame", {
 		Name = "TopBarDivider",
-		BackgroundColor3 = Theme.Stroke,
+		BackgroundColor3 = Theme.StrokeDim,
 		BackgroundTransparency = STROKE_T,
 		BorderSizePixel = 0,
 		Position = UDim2.new(0, 0, 1, -1),
@@ -831,13 +886,17 @@ function Library:CreateWindow(cfg)
 		ic.ZIndex = 13
 		ic.Parent = b
 
+		local hovered = false
+		scope:Bind(ic, "TextColor3", function(c) return hovered and c[hoverColorKey or "Text"] or c.SubText end)
 		b.MouseEnter:Connect(function()
+			hovered = true
+			scope:Update(ic, "TextColor3", TI)
 			tween(b, TI, { BackgroundTransparency = 0 })
-			tween(ic, TI, { TextColor3 = hoverColorKey and Theme[hoverColorKey] or Theme.Text })
 		end)
 		b.MouseLeave:Connect(function()
+			hovered = false
+			scope:Update(ic, "TextColor3", TI)
 			tween(b, TI, { BackgroundTransparency = 1 })
-			tween(ic, TI, { TextColor3 = Theme.SubText })
 		end)
 		return b
 	end
@@ -892,35 +951,36 @@ local menuList = create("ScrollingFrame", {
 
 	addMenuHeader("THEMES")
 
-	for _, themeName in ipairs(Library:GetThemes()) do
-		local themeBtn = create("TextButton", {
-			Text = "", AutoButtonColor = false,
-			BackgroundColor3 = Theme.Element,
-			Size = UDim2.new(1, 0, 0, 24),
-			BorderSizePixel = 0,
-			Parent = menuList,
-		})
-		corner(themeBtn, 4)
-		stroke(themeBtn, Theme.Stroke, STROKE_T)
-
-		local lbl = create("TextLabel", {
-			BackgroundTransparency = 1,
-			Text = themeName,
-			FontFace = FONT_MAIN,
-			TextColor3 = Theme.Text,
-			TextSize = 12,
-			Position = UDim2.new(0, 8, 0, 0),
-			Size = UDim2.new(1, -16, 1, 0),
-			TextXAlignment = Enum.TextXAlignment.Left,
-			Parent = themeBtn,
-		})
-
-		themeBtn.MouseEnter:Connect(function() tween(themeBtn, TI, { BackgroundColor3 = Theme.ElementHover }) end)
-		themeBtn.MouseLeave:Connect(function() tween(themeBtn, TI, { BackgroundColor3 = Theme.Element }) end)
-		themeBtn.Activated:Connect(function()
-			Window:SetTheme(themeName)
-		end)
+	local themeHolder = create("Frame", {
+		BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 0),
+		AutomaticSize = Enum.AutomaticSize.Y, Parent = menuList,
+	}, {
+		create("UIListLayout", { Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder }),
+	})
+	
+	local function rebuildThemeList()
+		for _, ch in themeHolder:GetChildren() do
+			if ch:IsA("TextButton") then ch:Destroy() end
+		end
+		for i, name in ipairs(Library:GetThemes()) do
+			local b = create("TextButton", {
+				Text = name, AutoButtonColor = false, FontFace = FONT_MAIN, TextSize = 12,
+				TextColor3 = Theme.Text, BackgroundColor3 = Theme.Element, BorderSizePixel = 0,
+				Size = UDim2.new(1, 0, 0, 24), LayoutOrder = i, Parent = themeHolder,
+			})
+			corner(b, 4)
+			local st = stroke(b, Theme.Stroke, STROKE_T)
+			scope:Bind(st, "Color", function(c) return currentTheme == name and c.Accent or c.Stroke end)
+			hoverable(scope, b, b, "BackgroundColor3", "Element", "ElementHover")
+			b.Activated:Connect(function() Window:SetTheme(name) end)
+		end
 	end
+	rebuildThemeList()
+	table.insert(Library._themeListeners, rebuildThemeList)
+	table.insert(Window._cleanups, function()
+		local i = table.find(Library._themeListeners, rebuildThemeList)
+		if i then table.remove(Library._themeListeners, i) end
+	end)
 
 	addMenuHeader("TOGGLE KEYBIND")
 	local hidden = false
@@ -997,12 +1057,12 @@ local menuList = create("ScrollingFrame", {
 		Position = UDim2.new(0, 0, 0, 45), Size = UDim2.new(1, 0, 1, -45),
 		Parent = BG,
 	})
-    local SIDEBAR_W = cfg.SidebarWidth or 160
-    local PROFILE_H = (cfg.Profile == false) and 0 or 60
+	local SIDEBAR_W = cfg.SidebarWidth or 160
+	local PROFILE_H = (cfg.Profile == false) and 0 or 60
 
 	-- Tab list
 	local TabList = create("ScrollingFrame", {
-		Name = "TabList", BackgroundColor3 = Theme.Secondary, BackgroundTransparency = 0.2,
+		Name = "TabList", BackgroundColor3 = Theme.Secondary, BackgroundTransparency = Theme.SidebarTransparency,
 		BorderSizePixel = 0, Size = UDim2.new(0, SIDEBAR_W, 1, -PROFILE_H),
 		CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y,
 		ScrollBarThickness = 3, ScrollBarImageColor3 = Theme.Stroke, ScrollBarImageTransparency = 0.5,
@@ -1019,7 +1079,7 @@ local menuList = create("ScrollingFrame", {
 	})
 
 	create("Frame", {
-		Name = "SideDivider", BackgroundColor3 = Theme.Stroke, BackgroundTransparency = STROKE_T,
+		Name = "SideDivider", BackgroundColor3 = Theme.StrokeDim, BackgroundTransparency = STROKE_T,
 		BorderSizePixel = 0, Position = UDim2.new(0, SIDEBAR_W, 0, 0), Size = UDim2.new(0, 1, 1, 0),
 		ZIndex = 2, Parent = Body,
 	})
@@ -1032,7 +1092,7 @@ local menuList = create("ScrollingFrame", {
 		local footer = create("Frame", {
 			Name = "Profile",
 			BackgroundColor3 = Theme.Secondary,
-			BackgroundTransparency = 0.2,
+			BackgroundTransparency = Theme.SidebarTransparency,
 			BorderSizePixel = 0,
 			Position = UDim2.new(0, 0, 1, -PROFILE_H),
 			Size = UDim2.new(0, SIDEBAR_W, 0, PROFILE_H),
@@ -1041,7 +1101,7 @@ local menuList = create("ScrollingFrame", {
 
 		-- Divider that separates the footer from the tab list
 		create("Frame", {
-			BackgroundColor3 = Theme.Stroke, BackgroundTransparency = STROKE_T,
+			BackgroundColor3 = Theme.StrokeDim, BackgroundTransparency = STROKE_T,
 			BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, 1), Parent = footer,
 		})
 
@@ -1100,6 +1160,14 @@ local menuList = create("ScrollingFrame", {
 			return string.format("%02d:%02d", t.hour, t.min)
 		end
 		timeLbl.Text = currentTime()
+		local clockAlive = true
+		table.insert(Window._cleanups, function() clockAlive = false end)
+		task.spawn(function()
+			while clockAlive and timeLbl.Parent do
+				task.wait(60 - (os.date("*t").sec % 60))
+				if clockAlive and timeLbl.Parent then timeLbl.Text = currentTime() end
+			end
+		end)
 		
 		-- Switch format at any time, e.g. Window:SetTimeFormat("12h")
 		function Window:SetTimeFormat(fmt)
@@ -1143,7 +1211,7 @@ local menuList = create("ScrollingFrame", {
 		end
 	end)
 
-    table.insert(Window._cleanups, function()
+	table.insert(Window._cleanups, function()
 		if toggleConn then toggleConn:Disconnect() end
 	end)
 
@@ -1155,7 +1223,7 @@ local menuList = create("ScrollingFrame", {
 		local Tab = {
 			_elements = {},
 			_parent = nil,
-			_orders = setmetatable({}, { __mode = "k" }),
+			_orders = {},
 		}
 
 		local Theme = scope.refs
@@ -1406,14 +1474,16 @@ local menuList = create("ScrollingFrame", {
 				AnchorPoint = Vector2.new(0, 0), Position = UDim2.new(), Size = UDim2.fromScale(1, 1),
 			})
 
-			btnEl.MouseEnter:Connect(function() tween(btnEl, TI, { BackgroundColor3 = Theme.ElementHover }) end)
-			btnEl.MouseLeave:Connect(function() tween(btnEl, TI, { BackgroundColor3 = Theme.Element }) end)
-			btnEl.Activated:Connect(function()
-				tween(btnEl, TI, { BackgroundColor3 = Theme.Accent })
-				task.wait(0.12)
-				tween(btnEl, TI, { BackgroundColor3 = Theme.Element })
-				el:_fire()
+			local hovered, pressed = false, false
+			scope:Bind(btnEl, "BackgroundColor3", function(c)
+				return pressed and c.ElementPressed or (hovered and c.ElementHover or c.Element)
 			end)
+			local function upd() scope:Update(btnEl, "BackgroundColor3", TI) end
+			btnEl.MouseEnter:Connect(function() hovered = true; upd() end)
+			btnEl.MouseLeave:Connect(function() hovered = false; pressed = false; upd() end)
+			btnEl.MouseButton1Down:Connect(function() pressed = true; upd() end)
+			btnEl.MouseButton1Up:Connect(function() pressed = false; upd() end)
+			btnEl.Activated:Connect(function() el:_fire() end)
 			return el
 		end
 
@@ -1836,9 +1906,17 @@ end
 					MaxSize = Vector2.new(txcfg.MaxWidth or 110, math.huge),
 				}),
 			})
-			tb.Focused:Connect(function() tween(tbStroke, TI, { Color = Theme.Accent, Transparency = 0.2 }) end)
+			local focused = false
+			scope:Bind(tbStroke, "Color", function(c) return focused and c.Accent or c.Stroke end)
+			tb.Focused:Connect(function()
+				focused = true
+				scope:Update(tbStroke, "Color", TI)
+				tween(tbStroke, TI, { Transparency = 0.2 })
+			end)
 			tb.FocusLost:Connect(function()
-				tween(tbStroke, TI, { Color = Theme.Stroke, Transparency = STROKE_T })
+				focused = false
+				scope:Update(tbStroke, "Color", TI)
+				tween(tbStroke, TI, { Transparency = STROKE_T })
 				el:_fire(tb.Text)
 			end)
 
@@ -2021,8 +2099,7 @@ end
 					check.Visible = selected[opt] == true
 					check.Parent = ob
 
-					ob.MouseEnter:Connect(function() tween(ob, TI, { BackgroundColor3 = Theme.ElementHover }) end)
-					ob.MouseLeave:Connect(function() tween(ob, TI, { BackgroundColor3 = Theme.Secondary }) end)
+					hoverable(scope, ob, ob, "BackgroundColor3", "Secondary", "ElementHover")
 					ob.Activated:Connect(function()
 						if multi then
 							selected[opt] = not selected[opt]
@@ -2032,7 +2109,7 @@ end
 						for _, b in optionBtns do
 							local on = selected[b.opt] == true
 							b.check.Visible = on
-							tween(b.txt, TI, { TextColor3 = on and Theme.Accent or Theme.SubText })
+							scope:Update(b.txt, "TextColor3", TI)
 						end
 						updateValLabel()
 						if multi then
@@ -2156,7 +2233,7 @@ end
 				Size = UDim2.new(1, 0, 0, 0), LayoutOrder = 2, Parent = holder,
 			})
 			create("Frame", {
-				BackgroundColor3 = Theme.Stroke, BackgroundTransparency = STROKE_T,
+				BackgroundColor3 = Theme.StrokeDim, BackgroundTransparency = STROKE_T,
 				BorderSizePixel = 0, Position = UDim2.new(0, PAD, 0, 0),
 				Size = UDim2.new(1, -PAD * 2, 0, 1), Parent = body,
 			})
@@ -2194,8 +2271,7 @@ end
 			end)
 		
 			header.Activated:Connect(function() setOpen(not open) end)
-			header.MouseEnter:Connect(function() tween(chev, TI, { TextColor3 = Theme.Text }) end)
-			header.MouseLeave:Connect(function() tween(chev, TI, { TextColor3 = Theme.SubText }) end)
+			hoverable(scope, header, chev, "TextColor3", "SubText", "Text")
 			setOpen(open, true)
 		
 			local section = makeContainer(content)
@@ -2292,7 +2368,13 @@ Library.Themes = Themes
 function Library:RegisterTheme(name, theme)
 	if type(name) ~= "string" or type(theme) ~= "table" then return false end
 	Themes[name] = applyTheme(DefaultTheme, theme)
+	for _, fn in table.clone(Library._themeListeners) do task.spawn(fn) end
 	return true
+end
+
+function Library:ResetTheme(animate)
+	GlobalScope:Apply(DefaultTheme, animate ~= false, true)
+	for _, win in Library._windows do win:ResetTheme(animate) end
 end
 
 function Library:GetThemes()
