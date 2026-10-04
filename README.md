@@ -261,6 +261,8 @@ local Window = Library:CreateWindow({
 | `Theme`     | table        | Custom theme for this window |
 | `ToggleKey` | Enum.KeyCode | Key used to show/hide the UI |
 
+`ErrorNotifications` : false  : Info - turns the Errors off, and `OnError = function(label, err)` is a hook for your own logging.
+
 Example:
 
 ```lua
