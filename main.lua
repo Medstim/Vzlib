@@ -1317,19 +1317,28 @@ function Tab:CreateToggle(tocfg)
 
 function Tab:CreateStatList(scfg)
 	scfg = scfg or {}
-	local el = newElement({ Kind = "StatList", Height = 36 })
+
+	local TweenService = game:GetService("TweenService")
+	local TWEEN = TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+
+	local HEADER_H = 36
+	local OUTER = 8       -- gap between paper and element edges
+	local PAD_Y = 6       -- paper top/bottom padding
+	local ROW_H = 20
+	local NOTE_FONT = Font.fromEnum(Enum.Font.Code)
+
+	local el = newElement({ Kind = "StatList", Height = HEADER_H })
 	local row = el.Instance
 	row.ClipsDescendants = true
 
-	local header = create("TextButton", { 
-		Text = "", 
+	local header = create("TextButton", {
+		Text = "",
 		AutoButtonColor = false,
-		BackgroundTransparency = 1, 
-		Size = UDim2.new(1, 0, 0, 36), 
-		Parent = row 
+		BackgroundTransparency = 1,
+		Size = UDim2.new(1, 0, 0, HEADER_H),
+		Parent = row,
 	})
 
-	-- Title Icon support
 	local hasIcon = scfg.Icon ~= nil and scfg.Icon ~= ""
 	if hasIcon then
 		local titleIcon = icon(scfg.Icon, 16, false, Theme.SubText)
@@ -1338,72 +1347,82 @@ function Tab:CreateStatList(scfg)
 		titleIcon.Parent = header
 	end
 
-	el:_addLabel({ 
-		Text = scfg.Name or "Info Dropdown", 
-		Position = UDim2.new(0, hasIcon and 32 or 10, 0, 0),
-		Size = UDim2.new(1, hasIcon and -60 or -38, 1, 0), 
-		Parent = header 
+	local leftX = hasIcon and 34 or 12
+	create("TextLabel", {
+		BackgroundTransparency = 1,
+		Text = scfg.Name or "Notes",
+		FontFace = FONT_MAIN,
+		TextColor3 = Theme.Text,
+		TextSize = 14,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		TextYAlignment = Enum.TextYAlignment.Center,
+		TextTruncate = Enum.TextTruncate.AtEnd,
+		AnchorPoint = Vector2.new(0, 0.5),
+		Position = UDim2.new(0, leftX, 0.5, 0),
+		Size = UDim2.new(1, -(leftX + 34), 1, 0),
+		Parent = header,
 	})
 
-	-- Up/Down Chevron Icon
 	local chev = icon("chevron-small-down", 16, false, Theme.SubText)
-	chev.AnchorPoint = Vector2.new(1, 0.5)
-	chev.Position = UDim2.new(1, -10, 0.5, 0)
+	chev.AnchorPoint = Vector2.new(0.5, 0.5)
+	chev.Position = UDim2.new(1, -18, 0.5, 0)
+	chev.Rotation = 0
 	chev.Parent = header
 
-	local listContainer = create("Frame", {
-		BackgroundTransparency = 1,
-		Position = UDim2.new(0, 0, 0, 36),
-		Size = UDim2.new(1, 0, 0, 0),
-		AutomaticSize = Enum.AutomaticSize.Y,
+	-- The "paper"
+	local list = create("Frame", {
+		BackgroundColor3 = Theme.Secondary,
+		BorderSizePixel = 0,
+		Position = UDim2.new(0, OUTER, 0, HEADER_H),
+		Size = UDim2.new(1, -OUTER * 2, 1, -(HEADER_H + OUTER)),
 		Visible = false,
+		ClipsDescendants = true,
 		Parent = row,
-	}, {
-		create("UIListLayout", { Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder }),
-		create("UIPadding", { PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8), PaddingBottom = UDim.new(0, 8) }),
+	})
+	corner(list, 6)
+
+	create("UIListLayout", {
+		Padding = UDim.new(0, 0),
+		SortOrder = Enum.SortOrder.LayoutOrder,
+		Parent = list,
+	})
+
+	create("UIPadding", {
+		PaddingTop = UDim.new(0, PAD_Y),
+		PaddingBottom = UDim.new(0, PAD_Y),
+		PaddingLeft = UDim.new(0, 10),
+		PaddingRight = UDim.new(0, 10),
+		Parent = list,
 	})
 
 	local items = {}
+	local order = 0
 	local open = false
 
-	local function calculateTargetHeight()
-		local count = 0
-		local extraPaddingHeight = 0
-		for _, item in pairs(items) do
-			count += 1
-			if item.isStat then
-				extraPaddingHeight += 26
-			else
-				-- Estimate plain text row height or fallback to minimum text height
-				extraPaddingHeight += math.max(item.frame.AbsoluteSize.Y, 24)
-			end
-		end
-		if count == 0 then return 36 end
-		return 36 + extraPaddingHeight + ((count - 1) * 4) + 12
+	local function openHeight()
+		local n = 0
+		for _ in pairs(items) do n += 1 end
+		return HEADER_H + math.max(n, 1) * ROW_H + PAD_Y * 2 + OUTER
 	end
 
-	local function updateSize()
-		if open then
-			task.defer(function()
-				tween(row, TI_S, { Size = UDim2.new(1, 0, 0, calculateTargetHeight()) })
-			end)
-		end
+	local function applySize()
+		local target = open and openHeight() or HEADER_H
+		el.Height = target
+		TweenService:Create(row, TWEEN, { Size = UDim2.new(1, 0, 0, target) }):Play()
 	end
 
 	local function toggle(force)
 		if force ~= nil then open = force else open = not open end
-		
-		if open then 
-			listContainer.Visible = true 
-			chev.Image = icon("chevron-small-up", 16, false, Theme.SubText).Image or chev.Image
-			tween(row, TI_S, { Size = UDim2.new(1, 0, 0, calculateTargetHeight()) })
+
+		TweenService:Create(chev, TWEEN, { Rotation = open and 180 or 0 }):Play()
+
+		if open then
+			list.Visible = true
+			applySize()
 		else
-			tween(row, TI_S, { Size = UDim2.new(1, 0, 0, 36) })
-			task.delay(0.12, function() 
-				if not open then 
-					listContainer.Visible = false 
-					chev.Image = icon("chevron-small-down", 16, false, Theme.SubText).Image or chev.Image
-				end 
+			applySize()
+			task.delay(0.15, function()
+				if not open then list.Visible = false end
 			end)
 		end
 	end
@@ -1411,7 +1430,6 @@ function Tab:CreateStatList(scfg)
 	header.Activated:Connect(function() toggle() end)
 	el._onLock = function() if open then toggle(false) end end
 
-	-- Unified API method to add Key-Value stats OR plain info notes
 	function el:Add(titleOrText, val, color)
 		local name = tostring(titleOrText)
 		local isValueStat = val ~= nil
@@ -1424,69 +1442,58 @@ function Tab:CreateStatList(scfg)
 			return items[name]
 		end
 
-		local itemRow = create("Frame", {
-			BackgroundColor3 = Theme.Secondary,
-			Size = isValueStat and UDim2.new(1, 0, 0, 26) or UDim2.new(1, 0, 0, 0),
-			AutomaticSize = isValueStat and Enum.AutomaticSize.None or Enum.AutomaticSize.Y,
-			BorderSizePixel = 0,
-			Parent = listContainer,
+		order += 1
+		local line = create("Frame", {
+			BackgroundTransparency = 1,
+			Size = UDim2.new(1, 0, 0, ROW_H),
+			LayoutOrder = order,
+			Parent = list,
 		})
-		corner(itemRow, 4)
 
 		if not isValueStat then
-			create("UIPadding", {
-				PaddingTop = UDim.new(0, 6),
-				PaddingBottom = UDim.new(0, 6),
-				PaddingLeft = UDim.new(0, 8),
-				PaddingRight = UDim.new(0, 8),
-				Parent = itemRow,
-			})
-
 			local infoLbl = create("TextLabel", {
 				BackgroundTransparency = 1,
 				Text = name,
-				FontFace = FONT_MAIN,
+				FontFace = NOTE_FONT,
 				TextColor3 = color or Theme.SubText,
-				TextSize = 12,
+				TextSize = 13,
 				TextXAlignment = Enum.TextXAlignment.Left,
-				TextWrapped = true,
-				Size = UDim2.new(1, 0, 0, 0),
-				AutomaticSize = Enum.AutomaticSize.Y,
-				Parent = itemRow,
+				TextTruncate = Enum.TextTruncate.AtEnd,
+				Size = UDim2.new(1, 0, 1, 0),
+				Parent = line,
 			})
-			items[name] = { frame = itemRow, infoLbl = infoLbl, isStat = false }
+			items[name] = { frame = line, infoLbl = infoLbl }
 		else
 			local nameLbl = create("TextLabel", {
 				BackgroundTransparency = 1,
 				Text = name,
-				FontFace = FONT_MAIN,
-				TextColor3 = Theme.Text,
+				FontFace = NOTE_FONT,
+				TextColor3 = Theme.SubText,
 				TextSize = 13,
 				TextXAlignment = Enum.TextXAlignment.Left,
 				TextTruncate = Enum.TextTruncate.AtEnd,
-				Position = UDim2.new(0, 8, 0, 0),
-				Size = UDim2.new(0.55, -8, 1, 0),
-				Parent = itemRow,
+				Size = UDim2.new(0.55, 0, 1, 0),
+				Parent = line,
 			})
 
 			local valLbl = create("TextLabel", {
 				BackgroundTransparency = 1,
 				Text = tostring(val),
-				FontFace = FONT_TITLE,
-				TextColor3 = color or Theme.Accent,
+				FontFace = NOTE_FONT,
+				TextColor3 = color or Theme.Text,
 				TextSize = 13,
 				TextXAlignment = Enum.TextXAlignment.Right,
 				TextTruncate = Enum.TextTruncate.AtEnd,
 				AnchorPoint = Vector2.new(1, 0),
-				Position = UDim2.new(1, -8, 0, 0),
-				Size = UDim2.new(0.45, -8, 1, 0),
-				Parent = itemRow,
+				Position = UDim2.new(1, 0, 0, 0),
+				Size = UDim2.new(0.45, 0, 1, 0),
+				Parent = line,
 			})
 
-			items[name] = { frame = itemRow, nameLbl = nameLbl, valLbl = valLbl, isStat = true }
+			items[name] = { frame = line, nameLbl = nameLbl, valLbl = valLbl }
 		end
 
-		updateSize()
+		if open then applySize() end
 		return items[name]
 	end
 
@@ -1498,7 +1505,7 @@ function Tab:CreateStatList(scfg)
 		if items[name] then
 			items[name].frame:Destroy()
 			items[name] = nil
-			updateSize()
+			if open then applySize() end
 		end
 	end
 
@@ -1507,7 +1514,7 @@ function Tab:CreateStatList(scfg)
 			data.frame:Destroy()
 		end
 		table.clear(items)
-		updateSize()
+		if open then applySize() end
 	end
 
 	return el
