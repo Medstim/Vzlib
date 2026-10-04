@@ -832,17 +832,18 @@ function Library:CreateWindow(cfg)
 	corner(settingsMenu, 8)
 	stroke(settingsMenu, Theme.Stroke, STROKE_T)
 
-local MAX_VISIBLE = dcfg.MaxVisible or 6
-local list = create("ScrollingFrame", {
-	BackgroundTransparency = 1, BorderSizePixel = 0,
-	Position = UDim2.new(0, 0, 0, 36),
-	Size = UDim2.new(1, 0, 0, 0),
-	CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y,
-	ScrollBarThickness = 2, ScrollBarImageColor3 = Theme.Stroke,
-	Visible = false, Parent = row,
+local menuList = create("ScrollingFrame", {
+	BackgroundTransparency = 1,
+	Size = UDim2.new(1, 0, 1, 0),
+	CanvasSize = UDim2.new(),
+	AutomaticCanvasSize = Enum.AutomaticSize.Y,
+	ScrollBarThickness = 2,
+	ScrollBarImageColor3 = Theme.Stroke,
+	BorderSizePixel = 0,
+	Parent = settingsMenu,
 }, {
-	create("UIListLayout", { Padding = UDim.new(0, 2), SortOrder = Enum.SortOrder.LayoutOrder }),
-	create("UIPadding", { PaddingLeft = UDim.new(0,8), PaddingRight = UDim.new(0,8), PaddingBottom = UDim.new(0,8) }),
+	create("UIListLayout", { Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder }),
+	create("UIPadding", { PaddingTop = UDim.new(0, 8), PaddingBottom = UDim.new(0, 8), PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8) }),
 })
 
 	local function addMenuHeader(text)
@@ -1378,11 +1379,11 @@ function Tab:CreateStatList(scfg)
 	local order = 0
 	local open = false
 
-    local function openHeight()
-	     local n = math.min(#options, MAX_VISIBLE)
-	     if n == 0 then return 44 end
-	    return 36 + (n * 28) + ((n - 1) * 2) + 8
-    end
+local function openHeight()
+	local n = 0
+	for _ in pairs(items) do n += 1 end
+	return HEADER_H + math.max(n, 1) * ROW_H + PAD_Y * 2 + OUTER
+end
 
 	local function applySize()
 		local target = open and openHeight() or HEADER_H
@@ -1854,9 +1855,13 @@ end
 			chev.Position = UDim2.new(1, -10, 0.5, 0)
 			chev.Parent = header
 
-			local list = create("Frame", {
-				BackgroundTransparency = 1, Position = UDim2.new(0, 0, 0, 36),
-				Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y,
+			local MAX_VISIBLE = dcfg.MaxVisible or 6
+			local list = create("ScrollingFrame", {
+				BackgroundTransparency = 1, BorderSizePixel = 0,
+				Position = UDim2.new(0, 0, 0, 36),
+				Size = UDim2.new(1, 0, 0, 0),
+				CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y,
+				ScrollBarThickness = 2, ScrollBarImageColor3 = Theme.Stroke,
 				Visible = false, Parent = row,
 			}, {
 				create("UIListLayout", { Padding = UDim.new(0, 2), SortOrder = Enum.SortOrder.LayoutOrder }),
@@ -1927,7 +1932,7 @@ end
 			end
 
 			local function openHeight()
-				local n = #options
+				local n = math.min(#options, MAX_VISIBLE)
 				if n == 0 then return 44 end
 				return 36 + (n * 28) + ((n - 1) * 2) + 8
 			end
