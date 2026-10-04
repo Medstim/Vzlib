@@ -1329,7 +1329,21 @@ function Tab:CreateStatList(scfg)
 		Parent = row 
 	})
 
-	el:_addLabel({ Text = scfg.Name or "Info Dropdown", Size = UDim2.new(0.8, 0, 1, 0), Parent = header })
+	-- Title Icon support
+	local hasIcon = scfg.Icon ~= nil and scfg.Icon ~= ""
+	if hasIcon then
+		local titleIcon = icon(scfg.Icon, 16, false, Theme.SubText)
+		titleIcon.AnchorPoint = Vector2.new(0, 0.5)
+		titleIcon.Position = UDim2.new(0, 10, 0.5, 0)
+		titleIcon.Parent = header
+	end
+
+	el:_addLabel({ 
+		Text = scfg.Name or "Info Dropdown", 
+		Position = UDim2.new(0, hasIcon and 32 or 10, 0, 0),
+		Size = UDim2.new(1, hasIcon and -60 or -38, 1, 0), 
+		Parent = header 
+	})
 
 	-- Up/Down Chevron Icon
 	local chev = icon("chevron-small-down", 16, false, Theme.SubText)
@@ -1352,20 +1366,26 @@ function Tab:CreateStatList(scfg)
 	local items = {}
 	local open = false
 
-	local function openHeight()
-		local contentHeight = 0
-		for _, child in listContainer:GetChildren() do
-			if child:IsA("GuiObject") then
-				contentHeight += child.AbsoluteSize.Y + 4
+	local function calculateTargetHeight()
+		local count = 0
+		local extraPaddingHeight = 0
+		for _, item in pairs(items) do
+			count += 1
+			if item.isStat then
+				extraPaddingHeight += 26
+			else
+				-- Estimate plain text row height or fallback to minimum text height
+				extraPaddingHeight += math.max(item.frame.AbsoluteSize.Y, 24)
 			end
 		end
-		return 36 + contentHeight + 4
+		if count == 0 then return 36 end
+		return 36 + extraPaddingHeight + ((count - 1) * 4) + 12
 	end
 
 	local function updateSize()
 		if open then
 			task.defer(function()
-				tween(row, TI_S, { Size = UDim2.new(1, 0, 0, openHeight()) })
+				tween(row, TI_S, { Size = UDim2.new(1, 0, 0, calculateTargetHeight()) })
 			end)
 		end
 	end
@@ -1376,25 +1396,22 @@ function Tab:CreateStatList(scfg)
 		if open then 
 			listContainer.Visible = true 
 			chev.Image = icon("chevron-small-up", 16, false, Theme.SubText).Image or chev.Image
-		end
-		
-		tween(row, TI_S, { Size = UDim2.new(1, 0, 0, open and openHeight() or 36) })
-		tween(chev, TI, { Rotation = open and 180 or 0 })
-		
-		if not open then 
+			tween(row, TI_S, { Size = UDim2.new(1, 0, 0, calculateTargetHeight()) })
+		else
+			tween(row, TI_S, { Size = UDim2.new(1, 0, 0, 36) })
 			task.delay(0.12, function() 
 				if not open then 
 					listContainer.Visible = false 
 					chev.Image = icon("chevron-small-down", 16, false, Theme.SubText).Image or chev.Image
 				end 
-			end) 
+			end)
 		end
 	end
 
 	header.Activated:Connect(function() toggle() end)
 	el._onLock = function() if open then toggle(false) end end
 
-	-- Unified API method
+	-- Unified API method to add Key-Value stats OR plain info notes
 	function el:Add(titleOrText, val, color)
 		local name = tostring(titleOrText)
 		local isValueStat = val ~= nil
@@ -1437,7 +1454,7 @@ function Tab:CreateStatList(scfg)
 				AutomaticSize = Enum.AutomaticSize.Y,
 				Parent = itemRow,
 			})
-			items[name] = { frame = itemRow, infoLbl = infoLbl }
+			items[name] = { frame = itemRow, infoLbl = infoLbl, isStat = false }
 		else
 			local nameLbl = create("TextLabel", {
 				BackgroundTransparency = 1,
@@ -1466,7 +1483,7 @@ function Tab:CreateStatList(scfg)
 				Parent = itemRow,
 			})
 
-			items[name] = { frame = itemRow, nameLbl = nameLbl, valLbl = valLbl }
+			items[name] = { frame = itemRow, nameLbl = nameLbl, valLbl = valLbl, isStat = true }
 		end
 
 		updateSize()
