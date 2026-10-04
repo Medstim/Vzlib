@@ -1440,6 +1440,15 @@ function Tab:CreateStatList(scfg)
 
 		order += 1
 		local itemHeight = isValueStat and 26 or 28
+		create("Frame", {
+			BackgroundColor3 = Theme.SubText,
+			BackgroundTransparency = 0.85,
+			BorderSizePixel = 0,
+			AnchorPoint = Vector2.new(0, 1),
+			Position = UDim2.new(0, 0, 1, 0),
+			Size = UDim2.new(1, 0, 0, 1),
+			Parent = line,
+		})
 		corner(itemRow, 4)
 
 		if not isValueStat then
