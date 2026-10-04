@@ -1344,26 +1344,43 @@ function Tab:CreateStatList(scfg)
 	chev.Parent = header
 
 	local list = create("Frame", {
-		BackgroundTransparency = 1, Position = UDim2.new(0, 0, 0, 36),
-		Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y,
-		Visible = false, Parent = row,
-	}, {
-		create("UIListLayout", { Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder }),
-		create("UIPadding", { PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8), PaddingBottom = UDim.new(0, 8) }),
+		BackgroundTransparency = 1, 
+		Position = UDim2.new(0, 0, 0, 36),
+		Size = UDim2.new(1, 0, 0, 0),
+		Visible = false, 
+		Parent = row,
+	})
+
+	local listLayout = create("UIListLayout", { 
+		Padding = UDim.new(0, 4), 
+		SortOrder = Enum.SortOrder.LayoutOrder,
+		Parent = list 
+	})
+
+	create("UIPadding", { 
+		PaddingLeft = UDim.new(0, 8), 
+		PaddingRight = UDim.new(0, 8), 
+		PaddingBottom = UDim.new(0, 8),
+		Parent = list 
 	})
 
 	local items = {}
 	local open = false
 
 	local function openHeight()
-		local count = 0
-		local totalHeight = 0
-		for _, item in pairs(items) do
-			count += 1
-			totalHeight += item.height
+		-- Measure absolute layout height + header (36) + padding (8)
+		local contentHeight = listLayout.AbsoluteContentSize.Y
+		if contentHeight == 0 then return 44 end
+		return 36 + contentHeight + 8
+	end
+
+	local function updateSize()
+		if open then
+			task.defer(function()
+				list.Size = UDim2.new(1, 0, 0, listLayout.AbsoluteContentSize.Y)
+				tween(row, TI_S, { Size = UDim2.new(1, 0, 0, openHeight()) })
+			end)
 		end
-		if count == 0 then return 44 end
-		return 36 + totalHeight + ((count - 1) * 4) + 8
 	end
 
 	local function toggle(force)
@@ -1371,10 +1388,9 @@ function Tab:CreateStatList(scfg)
 		if open then 
 			list.Visible = true 
 			chev.Image = icon("chevron-small-up", 16, false, Theme.SubText).Image or chev.Image
-		end
-		tween(row, TI_S, { Size = UDim2.new(1, 0, 0, open and openHeight() or 36) })
-		tween(chev, TI, { Rotation = open and 180 or 0 })
-		if not open then 
+			updateSize()
+		else
+			tween(row, TI_S, { Size = UDim2.new(1, 0, 0, 36) })
 			task.delay(0.12, function() 
 				if not open then 
 					list.Visible = false 
@@ -1387,7 +1403,6 @@ function Tab:CreateStatList(scfg)
 	header.Activated:Connect(function() toggle() end)
 	el._onLock = function() if open then toggle(false) end end
 
-	-- Unified API method to add Key-Value stats OR plain info notes
 	function el:Add(titleOrText, val, color)
 		local name = tostring(titleOrText)
 		local isValueStat = val ~= nil
@@ -1421,7 +1436,7 @@ function Tab:CreateStatList(scfg)
 				Size = UDim2.new(1, -16, 1, 0),
 				Parent = itemRow,
 			})
-			items[name] = { frame = itemRow, infoLbl = infoLbl, height = itemHeight }
+			items[name] = { frame = itemRow, infoLbl = infoLbl }
 		else
 			local nameLbl = create("TextLabel", {
 				BackgroundTransparency = 1,
@@ -1450,12 +1465,10 @@ function Tab:CreateStatList(scfg)
 				Parent = itemRow,
 			})
 
-			items[name] = { frame = itemRow, nameLbl = nameLbl, valLbl = valLbl, height = itemHeight }
+			items[name] = { frame = itemRow, nameLbl = nameLbl, valLbl = valLbl }
 		end
 
-		if open then
-			tween(row, TI_S, { Size = UDim2.new(1, 0, 0, openHeight()) })
-		end
+		updateSize()
 		return items[name]
 	end
 
@@ -1467,9 +1480,7 @@ function Tab:CreateStatList(scfg)
 		if items[name] then
 			items[name].frame:Destroy()
 			items[name] = nil
-			if open then
-				tween(row, TI_S, { Size = UDim2.new(1, 0, 0, openHeight()) })
-			end
+			updateSize()
 		end
 	end
 
@@ -1478,9 +1489,7 @@ function Tab:CreateStatList(scfg)
 			data.frame:Destroy()
 		end
 		table.clear(items)
-		if open then
-			tween(row, TI_S, { Size = UDim2.new(1, 0, 0, openHeight()) })
-		end
+		updateSize()
 	end
 
 	return el
