@@ -1061,7 +1061,7 @@ local menuList = create("ScrollingFrame", {
 			Parent = card,
 		})
 		corner(avatar, 16) -- fully round
-		stroke(avatar, Theme.Accent, 0.3)
+		stroke(avatar, Theme.Accent, 0.45)
 
 		local textHolder = create("Frame", {
 			BackgroundTransparency = 1,
