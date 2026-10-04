@@ -19,7 +19,7 @@ local DefaultTheme = {
 	Secondary = Color3.fromRGB(20, 20, 23),
 	Header = Color3.fromRGB(22, 22, 26),
 
-	BackgroundTransparency = 0.18,
+	BackgroundTransparency = 0.25,
 	HeaderTransparency = 0.05,
 	SidebarTransparency = 0.2,
 
@@ -109,7 +109,7 @@ local Themes = {
 		Secondary = Color3.fromRGB(14, 26, 43),
 		Header = Color3.fromRGB(13, 36, 60),
 
-		BackgroundTransparency = 0.7,
+		BackgroundTransparency = 1.7,
 		HeaderTransparency = 0.2,
 		SidebarTransparency = 0.3,		
 
