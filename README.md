@@ -91,6 +91,7 @@ MainTab:CreateLabel("── Main Example ──")
 MainTab:CreateToggle({
     Name = "Example Toggle",
     Default = false,
+    Description = "Automatically picks up rare spawned items within a 50-stud radius.",
 
     Callback = function(enabled)
         print("Toggle:", enabled)
@@ -1077,43 +1078,40 @@ Library:Notify({
 
 ---
 
-# Recommended Organization
+# Dropdown for Stats, info or a Tracker
 
-For a larger script, the following structure keeps things readable:
+Simple Example :
 
 ```lua
---// Load Library
-local Library = ...
+-- 1. Toggle with Sub-label / Description
+local autoPickupToggle = MainTab:CreateToggle({
+	Name = "Auto Collect Divine Items",
+	Description = "Automatically picks up rare spawned items within a 50-stud radius.",
+	Default = true,
+	Callback = function(state)
+		print("Auto collect toggled:", state)
+	end,
+})
 
---// Theme
-...
+-- 2. Stat / Info Dropdown Tracker
+local itemTracker = MainTab:CreateStatList({ 
+	Name = "Item & Server Overview" 
+})
 
---// Window
-local Window = ...
+-- Adding Key-Value Stats with custom colors
+itemTracker:Add("Divine items", 3, Color3.fromRGB(240, 180, 75))
+itemTracker:Add("Mythic items", 12, Color3.fromRGB(200, 80, 255))
 
---// State
-...
+-- Adding a Status Row
+itemTracker:Add("Server Status", "Operational", Color3.fromRGB(90, 205, 130))
 
---// Tabs
-...
+-- Adding a Plain Text Note
+itemTracker:Add("Notice: Items refresh automatically every 15 minutes.")
 
---// Main
-...
-
---// Misc
-...
-
---// Extras
-...
-
---// Settings
-...
-
---// Game
-...
-
---// Loaded
-...
+-- Example: Updating an existing stat dynamically after a delay
+task.delay(5, function()
+	itemTracker:Add("Divine items", 4, Color3.fromRGB(240, 180, 75))
+end)
 ```
 
 This keeps configuration, state, UI creation, and script logic easy to locate.
