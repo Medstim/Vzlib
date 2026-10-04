@@ -1391,17 +1391,11 @@ function Tab:CreateStatList(scfg)
 	local open = false
 
 	-- Height computed from the items themselves (no layout timing issues)
-	local function openHeight()
-		local total, n = 0, 0
-		for _, data in pairs(items) do
-			total += data.frame.Size.Y.Offset
-			n += 1
-		end
-		if n == 0 then
-			return HEADER_H + PAD_BOTTOM
-		end
-		return HEADER_H + total + GAP * (n - 1) + PAD_BOTTOM
-	end
+local function openHeight()
+	local n = 0
+	for _ in pairs(items) do n += 1 end
+	return HEADER_H + math.max(n, 1) * ROW_H + PAD_Y * 2 + OUTER
+end
 
 local TweenService = game:GetService("TweenService")
 
