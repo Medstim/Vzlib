@@ -1403,9 +1403,19 @@ function Tab:CreateStatList(scfg)
 		return HEADER_H + total + GAP * (n - 1) + PAD_BOTTOM
 	end
 
-	local function applySize()
-		tween(row, TI_S, { Size = UDim2.new(1, 0, 0, open and openHeight() or HEADER_H) })
-	end
+local TweenService = game:GetService("TweenService")
+
+local function applySize()
+	local target = open and openHeight() or HEADER_H
+	el.Height = target -- in case newElement/your tab layout reads this
+	print("[StatList] target height:", target, "row parent:", row.Parent and row.Parent.Name)
+
+	TweenService:Create(
+		row,
+		TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+		{ Size = UDim2.new(1, 0, 0, target) }
+	):Play()
+end
 
 	local function toggle(force)
 		if force ~= nil then open = force else open = not open end
@@ -1440,15 +1450,6 @@ function Tab:CreateStatList(scfg)
 
 		order += 1
 		local itemHeight = isValueStat and 26 or 28
-		create("Frame", {
-			BackgroundColor3 = Theme.SubText,
-			BackgroundTransparency = 0.85,
-			BorderSizePixel = 0,
-			AnchorPoint = Vector2.new(0, 1),
-			Position = UDim2.new(0, 0, 1, 0),
-			Size = UDim2.new(1, 0, 0, 1),
-			Parent = line,
-		})
 		corner(itemRow, 4)
 
 		if not isValueStat then
