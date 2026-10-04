@@ -727,7 +727,7 @@ function Library:CreateWindow(cfg)
 	----------------------------------------------------------------
 	local TopBar = create("Frame", {
 		Name = "TopBar",
-		BackgroundColor3 = Theme.Header,,
+		BackgroundColor3 = Theme.Header,
 		BackgroundTransparency = 0.05,
 		Size = UDim2.new(1, 0, 0, 42),
 		BorderSizePixel = 0,
