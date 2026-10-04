@@ -1290,35 +1290,9 @@ function Library:CreateWindow(cfg)
 			return el
 		end
 
-function Tab:CreateToggle(tocfg)
-	tocfg = tocfg or {}
-	local state = tocfg.Default or false
-	local hasDesc = tocfg.Description ~= nil and tocfg.Description ~= ""
-	
-	-- If a description is provided, dynamically grow height via AutomaticSize
-	local el = newElement({ 
-		Kind = "Toggle", 
-		Class = "TextButton", 
-		Height = hasDesc and 0 or 36, 
-		AutoY = hasDesc,
-		Callback = tocfg.Callback 
-	})
-	local row = el.Instance
-
-	if hasDesc then
-		create("UIPadding", {
-			PaddingTop = UDim.new(0, 8),
-			PaddingBottom = UDim.new(0, 8),
-			PaddingLeft = UDim.new(0, 10),
-			PaddingRight = UDim.new(0, 10),
-			Parent = row,
-		})
-	end
-
 function Tab:CreateStatList(scfg)
 	scfg = scfg or {}
 
-	local TweenService = game:GetService("TweenService")
 	local TWEEN = TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 
 	local HEADER_H = 36
@@ -1519,6 +1493,31 @@ function Tab:CreateStatList(scfg)
 
 	return el
 end
+
+function Tab:CreateToggle(tocfg)
+	tocfg = tocfg or {}
+	local state = tocfg.Default or false
+	local hasDesc = tocfg.Description ~= nil and tocfg.Description ~= ""
+	
+	-- If a description is provided, dynamically grow height via AutomaticSize
+	local el = newElement({ 
+		Kind = "Toggle", 
+		Class = "TextButton", 
+		Height = hasDesc and 0 or 36, 
+		AutoY = hasDesc,
+		Callback = tocfg.Callback 
+	})
+	local row = el.Instance
+
+	if hasDesc then
+		create("UIPadding", {
+			PaddingTop = UDim.new(0, 8),
+			PaddingBottom = UDim.new(0, 8),
+			PaddingLeft = UDim.new(0, 10),
+			PaddingRight = UDim.new(0, 10),
+			Parent = row,
+		})
+	end
 
 	-- Text Container (Title + Optional Description)
 	local textContainer = create("Frame", {
