@@ -1090,8 +1090,9 @@ local menuList = create("ScrollingFrame", {
 
 		-- Local time, refreshed once a minute on the minute
 		local use12h = cfg.TimeFormat == "12h"
+		local use24h = cfg.TimeFormat == "24h"
 		local function currentTime()
-			return os.date(use12h and "%I:%M %p" or "%H:%M")
+			return os.date(use24h and "%I:%M %p" or "%H:%M")
 		end
 		timeLbl.Text = currentTime()
 
