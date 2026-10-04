@@ -331,6 +331,19 @@ local function icon(name, size, filled, color)
 	})
 end
 
+local function runCleanups(list)
+	for i = #list, 1, -1 do
+		local item = list[i]
+		list[i] = nil
+		if type(item) == "function" then
+			pcall(item)
+		elseif typeof(item) == "RBXScriptConnection" then
+			item:Disconnect()
+		end
+	end
+end
+
+-- Returns a cleanup function that releases the global input connection.
 local function makeDraggable(frame, handle)
 	local dragging, dragInput, startPos, startFramePos
 	handle.InputBegan:Connect(function(inp)
@@ -348,7 +361,7 @@ local function makeDraggable(frame, handle)
 			dragInput = inp
 		end
 	end)
-	UserInputService.InputChanged:Connect(function(inp)
+	local conn = UserInputService.InputChanged:Connect(function(inp)
 		if inp == dragInput and dragging then
 			local delta = inp.Position - startPos
 			frame.Position = UDim2.new(
@@ -356,8 +369,12 @@ local function makeDraggable(frame, handle)
 				startFramePos.Y.Scale, startFramePos.Y.Offset + delta.Y)
 		end
 	end)
+	return function() conn:Disconnect() end
 end
 
+-- Returns a cleanup function that releases the global input connections.
+-- Drag end is tracked on UserInputService so releasing outside the region
+-- no longer leaves the drag stuck.
 local function bindDrag(region, onUpdate)
 	local dragging = false
 	local function upd(inp)
@@ -371,16 +388,20 @@ local function bindDrag(region, onUpdate)
 			dragging = true; upd(inp)
 		end
 	end)
-	region.InputEnded:Connect(function(inp)
-		if inp.UserInputType == Enum.UserInputType.MouseButton1 or inp.UserInputType == Enum.UserInputType.Touch then
-			dragging = false
-		end
-	end)
-	UserInputService.InputChanged:Connect(function(inp)
+	local changed = UserInputService.InputChanged:Connect(function(inp)
 		if dragging and (inp.UserInputType == Enum.UserInputType.MouseMovement or inp.UserInputType == Enum.UserInputType.Touch) then
 			upd(inp)
 		end
 	end)
+	local ended = UserInputService.InputEnded:Connect(function(inp)
+		if inp.UserInputType == Enum.UserInputType.MouseButton1 or inp.UserInputType == Enum.UserInputType.Touch then
+			dragging = false
+		end
+	end)
+	return function()
+		changed:Disconnect()
+		ended:Disconnect()
+	end
 end
 
 local function getGuiParent()
@@ -593,6 +614,42 @@ function Library:Notify(cfg, scope)
 end
 
 ----------------------------------------------------------------------
+-- Safe callbacks
+-- Runs user callbacks in their own thread, catches errors, and reports
+-- them via warn + an Error notification (throttled so a callback that
+-- errors every frame, like a slider drag, can't flood the screen).
+-- Window options: ErrorNotifications (default true), OnError(label, err)
+----------------------------------------------------------------------
+local ERROR_COOLDOWN = 3
+local errorStamps = {}
+
+local function safeCall(window, label, fn, ...)
+	if type(fn) ~= "function" then return end
+	task.spawn(function(...)
+		local ok, err = xpcall(fn, function(e) return debug.traceback(tostring(e), 2) end, ...)
+		if ok then return end
+
+		local now = os.clock()
+		local last = errorStamps[label]
+		if last and now - last < ERROR_COOLDOWN then return end
+		errorStamps[label] = now
+
+		warn(("[VaehzUI] %s callback errored:\n%s"):format(label, tostring(err)))
+		if window.OnError then pcall(window.OnError, label, err) end
+		if window.ErrorNotifications ~= false then
+			local msg = tostring(err):match("^[^\n]*") or "unknown error"
+			if #msg > 120 then msg = msg:sub(1, 117) .. "..." end
+			Library:Notify({
+				Title = "Callback error",
+				Content = label .. ": " .. msg,
+				Type = "Error",
+				Duration = 6,
+			}, window._scope)
+		end
+	end, ...)
+end
+
+----------------------------------------------------------------------
 -- Window
 ----------------------------------------------------------------------
 function Library:CreateWindow(cfg)
@@ -601,7 +658,17 @@ function Library:CreateWindow(cfg)
 	local scope = newScope(GlobalScope.colors)
 	local overrides = {}
 
-	local Window = { Tabs = {}, _current = nil, _scope = scope, _overrides = overrides }
+	local Window = { Tabs = {}, _current = nil, _scope = scope, _overrides = overrides, _cleanups = {} }
+	Window.ErrorNotifications = cfg.ErrorNotifications ~= false
+	Window.OnError = cfg.OnError
+
+	-- Releases every global connection owned by this window and its elements.
+	function Window:_cleanup()
+		runCleanups(self._cleanups)
+		for _, tab in self.Tabs do
+			for _, el in tab._elements do el:_disconnect() end
+		end
+	end
 	Window.Theme = scope.colors
 	local Theme = scope.refs
 
@@ -921,13 +988,14 @@ function Library:CreateWindow(cfg)
 		ZIndex = 2, Parent = Body,
 	})
 
-	makeDraggable(BG, TopBar)
+	table.insert(Window._cleanups, makeDraggable(BG, TopBar))
 
 	local destroyed = false
 	function Window:Destroy()
 		if destroyed then return end
 		destroyed = true
 		if toggleConn then toggleConn:Disconnect() end
+		Window:_cleanup()
 		local idx = table.find(Library._windows, Window)
 		if idx then table.remove(Library._windows, idx) end
 		tween(BG, TI, { GroupTransparency = 1, Size = UDim2.fromOffset(BG.AbsoluteSize.X, 0) })
@@ -961,7 +1029,7 @@ function Library:CreateWindow(cfg)
 	----------------------------------------------------------------
 	function Window:CreateTab(tcfg)
 		tcfg = tcfg or {}
-		local Tab = { _order = 0 }
+		local Tab = { _order = 0, _elements = {} }
 
 		local btn = create("TextButton", {
 			Text = "", AutoButtonColor = false, BackgroundColor3 = Theme.Element,
@@ -1035,43 +1103,149 @@ function Library:CreateWindow(cfg)
 		table.insert(Window.Tabs, Tab)
 		if #Window.Tabs == 1 then select() end
 
-		local function newRow(height)
+		------------------------------------------------------------
+		-- Element base
+		-- Every element is built through newElement(). It creates the
+		-- row (background, corner, stroke, layout order) and returns an
+		-- object with the shared API:
+		--   :SetName(text)  :SetVisible(bool)  :SetLocked(bool)
+		--   :IsLocked()     :Destroy()         .Instance
+		-- plus internal helpers used by the element constructors:
+		--   :_addLabel(props)  :_fire(...)  :_own(connOrFn)
+		-- opts: Kind, Height, Class ("Frame"|"TextButton"), Plain, AutoY, Callback
+		------------------------------------------------------------
+		local function newElement(opts)
+			opts = opts or {}
 			Tab._order += 1
-			local row = create("Frame", {
-				BackgroundColor3 = Theme.Element, Size = UDim2.new(1, 0, 0, height or 34),
-				LayoutOrder = Tab._order, BorderSizePixel = 0, Parent = page,
-			})
-			corner(row, 6)
-			stroke(row, Theme.Stroke, STROKE_T)
-			return row
+
+			local props = {
+				BackgroundColor3 = Theme.Element,
+				BackgroundTransparency = opts.Plain and 1 or 0,
+				Size = UDim2.new(1, 0, 0, opts.Height or 34),
+				LayoutOrder = Tab._order,
+				BorderSizePixel = 0,
+				Parent = page,
+			}
+			if opts.AutoY then props.AutomaticSize = Enum.AutomaticSize.Y end
+			if opts.Class == "TextButton" then
+				props.Text = ""
+				props.AutoButtonColor = false
+			end
+
+			local row = create(opts.Class or "Frame", props)
+			if not opts.Plain then
+				corner(row, 6)
+				stroke(row, Theme.Stroke, STROKE_T)
+			end
+
+			local el = {
+				Instance = row,
+				_row = row,
+				_kind = opts.Kind or "Element",
+				_name = nil,
+				_label = nil,
+				_overlay = nil,
+				_locked = false,
+				_destroyed = false,
+				_cleanups = {},
+			}
+
+			-- Standard name label (left side, vertically centered by default).
+			-- Pass props to override anything, including Parent.
+			function el:_addLabel(lprops)
+				local p = {
+					BackgroundTransparency = 1, Text = "",
+					FontFace = FONT_MAIN, TextColor3 = Theme.Text, TextSize = 14,
+					TextXAlignment = Enum.TextXAlignment.Left,
+					AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 10, 0.5, 0),
+					Size = UDim2.new(1, -70, 1, 0), Parent = row,
+				}
+				for k, v in lprops or {} do p[k] = v end
+				self._label = create("TextLabel", p)
+				self._name = p.Text
+				return self._label
+			end
+
+			-- Run the element's Callback safely (errors are caught, logged and
+			-- surfaced through Window:Notify instead of silently dying).
+			function el:_fire(...)
+				safeCall(Window, ("%s '%s'"):format(self._kind, tostring(self._name or "?")), opts.Callback, ...)
+			end
+
+			-- Register a connection (or cleanup function) to release on destroy.
+			function el:_own(item)
+				if item then table.insert(self._cleanups, item) end
+				return item
+			end
+
+			function el:SetName(text)
+				self._name = tostring(text)
+				if self._label then self._label.Text = self._name end
+			end
+
+			function el:SetVisible(visible)
+				row.Visible = visible ~= false
+			end
+
+			function el:SetLocked(locked)
+				locked = locked ~= false
+				self._locked = locked
+				if locked and not self._overlay then
+					-- A TextButton reliably sinks input from everything beneath it.
+					self._overlay = create("TextButton", {
+						Text = "", AutoButtonColor = false,
+						BackgroundColor3 = Theme.Background, BackgroundTransparency = 0.45,
+						Size = UDim2.fromScale(1, 1), BorderSizePixel = 0, ZIndex = 50,
+						Parent = row,
+					})
+					corner(self._overlay, 6)
+				end
+				if self._overlay then self._overlay.Visible = locked end
+				if locked and self._onLock then self._onLock() end
+			end
+
+			function el:IsLocked() return self._locked end
+
+			-- Release global connections without touching the instance
+			-- (used when the whole window is being torn down).
+			function el:_disconnect()
+				runCleanups(self._cleanups)
+			end
+
+			function el:Destroy()
+				if self._destroyed then return end
+				self._destroyed = true
+				self:_disconnect()
+				local idx = table.find(Tab._elements, self)
+				if idx then table.remove(Tab._elements, idx) end
+				row:Destroy()
+			end
+
+			table.insert(Tab._elements, el)
+			return el
 		end
 
 		------------------------------------------------------------
 		-- Elements
 		------------------------------------------------------------
 		function Tab:CreateLabel(text)
-			Tab._order += 1
-			local row = create("Frame", {
-				BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 0),
-				AutomaticSize = Enum.AutomaticSize.Y, LayoutOrder = Tab._order,
-				BorderSizePixel = 0, Parent = page,
+			local el = newElement({ Kind = "Label", Plain = true, Height = 0, AutoY = true })
+			el:_addLabel({
+				Text = text or "Label", TextColor3 = Theme.SubText, TextSize = 13,
+				TextWrapped = true, AutomaticSize = Enum.AutomaticSize.Y,
+				AnchorPoint = Vector2.new(0, 0), Position = UDim2.new(0, 4, 0, 0),
+				Size = UDim2.new(1, -8, 0, 0),
 			})
-			local lbl = create("TextLabel", {
-				BackgroundTransparency = 1, Text = text or "Label",
-				FontFace = FONT_MAIN, TextColor3 = Theme.SubText, TextSize = 13,
-				TextXAlignment = Enum.TextXAlignment.Left, TextWrapped = true,
-				AutomaticSize = Enum.AutomaticSize.Y, Size = UDim2.new(1, -8, 0, 0),
-				Position = UDim2.new(0, 4, 0, 0), Parent = row,
-			})
-			create("UIPadding", { PaddingTop = UDim.new(0, 3), PaddingBottom = UDim.new(0, 3), Parent = row })
-			return { Set = function(_, t) lbl.Text = t end, Instance = row }
+			create("UIPadding", { PaddingTop = UDim.new(0, 3), PaddingBottom = UDim.new(0, 3), Parent = el.Instance })
+			function el:Set(t) self:SetName(t) end
+			return el
 		end
 
 		function Tab:CreateWarning(text)
-			local row = newRow(0)
-			row.AutomaticSize = Enum.AutomaticSize.Y
+			local el = newElement({ Kind = "Warning", Height = 0, AutoY = true })
+			local row = el.Instance
 			scope:Bind(row, "BackgroundColor3", "WarningBg")
-			
+
 			create("UIPadding", {
 				PaddingTop = UDim.new(0, 9), PaddingBottom = UDim.new(0, 9),
 				PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10), Parent = row,
@@ -1080,65 +1254,55 @@ function Library:CreateWindow(cfg)
 			ico.AnchorPoint = Vector2.new(0, 0.5)
 			ico.Position = UDim2.new(0, 0, 0.5, 0)
 			ico.Parent = row
-			
-			local lbl = create("TextLabel", {
-				BackgroundTransparency = 1, Text = text or "Warning",
-				FontFace = FONT_MAIN, TextColor3 = Theme.Warning, TextSize = 14,
-				TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Center,
-				TextWrapped = true, AutomaticSize = Enum.AutomaticSize.Y,
-				Size = UDim2.new(1, -28, 0, 0), Position = UDim2.new(0, 28, 0, 0), Parent = row,
+
+			el:_addLabel({
+				Text = text or "Warning", TextColor3 = Theme.Warning,
+				TextYAlignment = Enum.TextYAlignment.Center, TextWrapped = true,
+				AutomaticSize = Enum.AutomaticSize.Y,
+				AnchorPoint = Vector2.new(0, 0), Position = UDim2.new(0, 28, 0, 0),
+				Size = UDim2.new(1, -28, 0, 0),
 			})
-			return { Set = function(_, t) lbl.Text = t end, Instance = row }
+			function el:Set(t) self:SetName(t) end
+			return el
 		end
 
 		function Tab:CreateButton(bcfg)
 			bcfg = bcfg or {}
-			Tab._order += 1
-			local btnEl = create("TextButton", {
-				Text = "", AutoButtonColor = false, BackgroundColor3 = Theme.Element,
-				Size = UDim2.new(1, 0, 0, 36), LayoutOrder = Tab._order, BorderSizePixel = 0, Parent = page,
+			local el = newElement({ Kind = "Button", Class = "TextButton", Height = 36, Callback = bcfg.Callback })
+			local btnEl = el.Instance
+
+			el:_addLabel({
+				Text = bcfg.Name or "Button", TextXAlignment = Enum.TextXAlignment.Center,
+				AnchorPoint = Vector2.new(0, 0), Position = UDim2.new(), Size = UDim2.fromScale(1, 1),
 			})
-			corner(btnEl, 6)
-			stroke(btnEl, Theme.Stroke, STROKE_T)
-			
-			local txtLbl = create("TextLabel", {
-				BackgroundTransparency = 1, Text = bcfg.Name or "Button",
-				FontFace = FONT_MAIN, TextColor3 = Theme.Text, TextSize = 14,
-				Size = UDim2.new(1, 0, 1, 0), Parent = btnEl,
-			})
-			
+
 			btnEl.MouseEnter:Connect(function() tween(btnEl, TI, { BackgroundColor3 = Theme.ElementHover }) end)
 			btnEl.MouseLeave:Connect(function() tween(btnEl, TI, { BackgroundColor3 = Theme.Element }) end)
 			btnEl.Activated:Connect(function()
 				tween(btnEl, TI, { BackgroundColor3 = Theme.Accent })
 				task.wait(0.12)
 				tween(btnEl, TI, { BackgroundColor3 = Theme.Element })
-				if bcfg.Callback then task.spawn(bcfg.Callback) end
+				el:_fire()
 			end)
-			return { Instance = btnEl }
+			return el
 		end
 
 		function Tab:CreateToggle(tocfg)
 			tocfg = tocfg or {}
 			local state = tocfg.Default or false
-			local row = newRow(36)
-			local btnEl = create("TextButton", { Text = "", BackgroundTransparency = 1, Size = UDim2.new(1, 0, 1, 0), Parent = row })
-			
-			local title = create("TextLabel", {
-				BackgroundTransparency = 1, Text = tocfg.Name or "Toggle",
-				FontFace = FONT_MAIN, TextColor3 = Theme.Text, TextSize = 14,
-				TextXAlignment = Enum.TextXAlignment.Left, AnchorPoint = Vector2.new(0, 0.5),
-				Position = UDim2.new(0, 10, 0.5, 0), Size = UDim2.new(1, -70, 1, 0), Parent = btnEl,
-			})
+			local el = newElement({ Kind = "Toggle", Class = "TextButton", Height = 36, Callback = tocfg.Callback })
+			local row = el.Instance
+
+			el:_addLabel({ Text = tocfg.Name or "Toggle" })
+
 			local track = create("Frame", {
 				BackgroundColor3 = state and Theme.Accent or Theme.Off,
 				AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -10, 0.5, 0),
-				Size = UDim2.fromOffset(40, 20), BorderSizePixel = 0, Parent = btnEl,
+				Size = UDim2.fromOffset(40, 20), BorderSizePixel = 0, Parent = row,
 			})
 			corner(track, 10)
-			
 			scope:Bind(track, "BackgroundColor3", function(c) return state and c.Accent or c.Off end)
-			
+
 			local knob = create("Frame", {
 				BackgroundColor3 = Theme.Knob, AnchorPoint = Vector2.new(0, 0.5),
 				Position = state and UDim2.new(1, -18, 0.5, 0) or UDim2.new(0, 2, 0.5, 0),
@@ -1146,89 +1310,83 @@ function Library:CreateWindow(cfg)
 			})
 			corner(knob, 8)
 
-			local api = {}
-			function api:Set(v)
+			function el:Set(v)
 				state = v
 				tween(track, TI, { BackgroundColor3 = state and Theme.Accent or Theme.Off })
 				tween(knob, TI, { Position = state and UDim2.new(1, -18, 0.5, 0) or UDim2.new(0, 2, 0.5, 0) })
-				if tocfg.Callback then task.spawn(tocfg.Callback, state) end
+				self:_fire(state)
 			end
-			function api:Get() return state end
-			btnEl.Activated:Connect(function() api:Set(not state) end)
-			if state and tocfg.Callback then task.spawn(tocfg.Callback, true) end
-			api.Instance = row
-			return api
+			function el:Get() return state end
+
+			row.Activated:Connect(function() el:Set(not state) end)
+			if state then el:_fire(true) end
+			return el
 		end
 
 		function Tab:CreateStat(scfg)
 			scfg = scfg or {}
-			local row = newRow(34)
-			create("TextLabel", {
-				BackgroundTransparency = 1, Text = scfg.Name or "Stat",
-				FontFace = FONT_MAIN, TextColor3 = Theme.SubText, TextSize = 14,
-				TextXAlignment = Enum.TextXAlignment.Left, AnchorPoint = Vector2.new(0, 0.5),
-				Position = UDim2.new(0, 10, 0.5, 0), Size = UDim2.new(0.5, -10, 1, 0), Parent = row,
+			local el = newElement({ Kind = "Stat", Height = 34 })
+			el:_addLabel({
+				Text = scfg.Name or "Stat", TextColor3 = Theme.SubText,
+				Size = UDim2.new(0.5, -10, 1, 0),
 			})
 			local valLbl = create("TextLabel", {
 				BackgroundTransparency = 1, Text = tostring(scfg.Value or "-"),
 				FontFace = FONT_TITLE, TextColor3 = Theme.Accent, TextSize = 14,
 				TextXAlignment = Enum.TextXAlignment.Right, TextTruncate = Enum.TextTruncate.AtEnd,
 				AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -10, 0.5, 0),
-				Size = UDim2.new(0.5, -10, 1, 0), Parent = row,
+				Size = UDim2.new(0.5, -10, 1, 0), Parent = el.Instance,
 			})
-			return { Set = function(_, v) valLbl.Text = tostring(v) end, Instance = row }
+			function el:Set(v) valLbl.Text = tostring(v) end
+			function el:Get() return valLbl.Text end
+			return el
 		end
 
-function Tab:CreateSlider(slcfg)
-	slcfg = slcfg or {}
-	local min, max = slcfg.Min or 0, slcfg.Max or 100
-	local inc = slcfg.Increment or 1
-	local value = math.clamp(slcfg.Default or min, min, max)
-	local row = newRow(50)
+		function Tab:CreateSlider(slcfg)
+			slcfg = slcfg or {}
+			local min, max = slcfg.Min or 0, slcfg.Max or 100
+			local inc = slcfg.Increment or 1
+			local value = math.clamp(slcfg.Default or min, min, max)
+			local el = newElement({ Kind = "Slider", Height = 50, Callback = slcfg.Callback })
+			local row = el.Instance
 
-	create("TextLabel", {
-		BackgroundTransparency = 1, Text = slcfg.Name or "Slider",
-		FontFace = FONT_MAIN, TextColor3 = Theme.Text, TextSize = 14,
-		TextXAlignment = Enum.TextXAlignment.Left, Position = UDim2.new(0, 10, 0, 6),
-		Size = UDim2.new(1, -70, 0, 16), Parent = row,
-	})
+			el:_addLabel({
+				Text = slcfg.Name or "Slider",
+				AnchorPoint = Vector2.new(0, 0), Position = UDim2.new(0, 10, 0, 6),
+				Size = UDim2.new(1, -70, 0, 16),
+			})
 
-	local valLbl = create("TextLabel", {
-		BackgroundTransparency = 1, Text = tostring(value),
-		FontFace = FONT_TITLE, TextColor3 = Theme.Accent, TextSize = 14,
-		TextXAlignment = Enum.TextXAlignment.Right, AnchorPoint = Vector2.new(1, 0),
-		Position = UDim2.new(1, -10, 0, 6), Size = UDim2.new(0, 60, 0, 16), Parent = row,
-	})
-	-- FIX: Bind Value Label TextColor3
-	scope:Bind(valLbl, "TextColor3", "Accent")
+			local valLbl = create("TextLabel", {
+				BackgroundTransparency = 1, Text = tostring(value),
+				FontFace = FONT_TITLE, TextColor3 = Theme.Accent, TextSize = 14,
+				TextXAlignment = Enum.TextXAlignment.Right, AnchorPoint = Vector2.new(1, 0),
+				Position = UDim2.new(1, -10, 0, 6), Size = UDim2.new(0, 60, 0, 16), Parent = row,
+			})
+			scope:Bind(valLbl, "TextColor3", "Accent")
 
-	local track = create("Frame", {
-		BackgroundColor3 = Theme.Off, AnchorPoint = Vector2.new(0, 0.5),
-		Position = UDim2.new(0, 10, 1, -14), Size = UDim2.new(1, -20, 0, 6),
-		BorderSizePixel = 0, Parent = row,
-	})
-	corner(track, 3)
-	-- FIX: Bind Slider Track Background Color
-	scope:Bind(track, "BackgroundColor3", "Off")
-	
-	local fill = create("Frame", {
-		BackgroundColor3 = Theme.Accent, Size = UDim2.new((value - min) / (max - min), 0, 1, 0),
-		BorderSizePixel = 0, Parent = track,
-	})
-	corner(fill, 3)
-	-- FIX: Bind Slider Fill Background Color
-	scope:Bind(fill, "BackgroundColor3", "Accent")
-	
-	local knob = create("Frame", {
-		BackgroundColor3 = Theme.Knob, AnchorPoint = Vector2.new(0.5, 0.5),
-		Position = UDim2.new((value - min) / (max - min), 0, 0.5, 0),
-		Size = UDim2.fromOffset(14, 14), BorderSizePixel = 0, ZIndex = 2, Parent = track,
-	})
-	corner(knob, 7)
-	-- FIX: Bind Knob Color
-	scope:Bind(knob, "BackgroundColor3", "Knob")
+			local track = create("Frame", {
+				BackgroundColor3 = Theme.Off, AnchorPoint = Vector2.new(0, 0.5),
+				Position = UDim2.new(0, 10, 1, -14), Size = UDim2.new(1, -20, 0, 6),
+				BorderSizePixel = 0, Parent = row,
+			})
+			corner(track, 3)
+			scope:Bind(track, "BackgroundColor3", "Off")
 
-			local api = {}
+			local fill = create("Frame", {
+				BackgroundColor3 = Theme.Accent, Size = UDim2.new((value - min) / (max - min), 0, 1, 0),
+				BorderSizePixel = 0, Parent = track,
+			})
+			corner(fill, 3)
+			scope:Bind(fill, "BackgroundColor3", "Accent")
+
+			local knob = create("Frame", {
+				BackgroundColor3 = Theme.Knob, AnchorPoint = Vector2.new(0.5, 0.5),
+				Position = UDim2.new((value - min) / (max - min), 0, 0.5, 0),
+				Size = UDim2.fromOffset(14, 14), BorderSizePixel = 0, ZIndex = 2, Parent = track,
+			})
+			corner(knob, 7)
+			scope:Bind(knob, "BackgroundColor3", "Knob")
+
 			local function apply(alpha, fire)
 				local raw = min + (max - min) * alpha
 				value = math.clamp(math.floor(raw / inc + 0.5) * inc, min, max)
@@ -1236,24 +1394,22 @@ function Tab:CreateSlider(slcfg)
 				fill.Size = UDim2.new(a, 0, 1, 0)
 				knob.Position = UDim2.new(a, 0, 0.5, 0)
 				valLbl.Text = tostring(value)
-				if fire and slcfg.Callback then task.spawn(slcfg.Callback, value) end
+				if fire then el:_fire(value) end
 			end
-			bindDrag(track, function(ax) apply(ax, true) end)
-			function api:Set(v) apply((math.clamp(v, min, max) - min) / (max - min), true) end
-			function api:Get() return value end
-			api.Instance = row
-			return api
+			el:_own(bindDrag(track, function(ax) apply(ax, true) end))
+
+			function el:Set(v) apply((math.clamp(v, min, max) - min) / (max - min), true) end
+			function el:Get() return value end
+			return el
 		end
 
 		function Tab:CreateTextbox(txcfg)
 			txcfg = txcfg or {}
-			local row = newRow(36)
-			create("TextLabel", {
-				BackgroundTransparency = 1, Text = txcfg.Name or "Textbox",
-				FontFace = FONT_MAIN, TextColor3 = Theme.Text, TextSize = 14,
-				TextXAlignment = Enum.TextXAlignment.Left, AnchorPoint = Vector2.new(0, 0.5),
-				Position = UDim2.new(0, 10, 0.5, 0), Size = UDim2.new(0.4, -10, 1, 0), Parent = row,
-			})
+			local el = newElement({ Kind = "Textbox", Height = 36, Callback = txcfg.Callback })
+			local row = el.Instance
+
+			el:_addLabel({ Text = txcfg.Name or "Textbox", Size = UDim2.new(0.4, -10, 1, 0) })
+
 			local boxWrap = create("Frame", {
 				BackgroundColor3 = Theme.Secondary, AnchorPoint = Vector2.new(1, 0.5),
 				Position = UDim2.new(1, -8, 0.5, 0), Size = UDim2.new(0, 0, 0, 24),
@@ -1279,13 +1435,12 @@ function Tab:CreateSlider(slcfg)
 			tb.Focused:Connect(function() tween(tbStroke, TI, { Color = Theme.Accent, Transparency = 0.2 }) end)
 			tb.FocusLost:Connect(function()
 				tween(tbStroke, TI, { Color = Theme.Stroke, Transparency = STROKE_T })
-				if txcfg.Callback then task.spawn(txcfg.Callback, tb.Text) end
+				el:_fire(tb.Text)
 			end)
-			return {
-				Set = function(_, t) tb.Text = t end,
-				Get = function() return tb.Text end,
-				Instance = row,
-			}
+
+			function el:Set(t) tb.Text = t end
+			function el:Get() return tb.Text end
+			return el
 		end
 
 		function Tab:CreateColorPicker(ccfg)
@@ -1293,15 +1448,12 @@ function Tab:CreateSlider(slcfg)
 			local color = ccfg.Default or Color3.fromRGB(255, 0, 0)
 			local h, s, v = color:ToHSV()
 
-			local row = newRow(36)
+			local el = newElement({ Kind = "ColorPicker", Height = 36, Callback = ccfg.Callback })
+			local row = el.Instance
 			row.ClipsDescendants = true
+
 			local header = create("TextButton", { Text = "", BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 36), Parent = row })
-			create("TextLabel", {
-				BackgroundTransparency = 1, Text = ccfg.Name or "Color",
-				FontFace = FONT_MAIN, TextColor3 = Theme.Text, TextSize = 14,
-				TextXAlignment = Enum.TextXAlignment.Left, AnchorPoint = Vector2.new(0, 0.5),
-				Position = UDim2.new(0, 10, 0.5, 0), Size = UDim2.new(1, -60, 1, 0), Parent = header,
-			})
+			el:_addLabel({ Text = ccfg.Name or "Color", Size = UDim2.new(1, -60, 1, 0), Parent = header })
 			local swatch = create("Frame", {
 				BackgroundColor3 = color, AnchorPoint = Vector2.new(1, 0.5),
 				Position = UDim2.new(1, -10, 0.5, 0), Size = UDim2.fromOffset(34, 18),
@@ -1366,24 +1518,24 @@ function Tab:CreateSlider(slcfg)
 				svCursor.Position = UDim2.new(s, 0, 1 - v, 0)
 				hueCursor.Position = UDim2.new(0.5, 0, h, 0)
 				swatch.BackgroundColor3 = color
-				if fire and ccfg.Callback then task.spawn(ccfg.Callback, color) end
+				if fire then el:_fire(color) end
 			end
-			bindDrag(sv, function(ax, ay) s = ax; v = 1 - ay; refresh(true) end)
-			bindDrag(hue, function(_, ay) h = ay; refresh(true) end)
+			el:_own(bindDrag(sv, function(ax, ay) s = ax; v = 1 - ay; refresh(true) end))
+			el:_own(bindDrag(hue, function(_, ay) h = ay; refresh(true) end))
 
 			local open = false
-			header.Activated:Connect(function()
-				open = not open
+			local function setOpen(state)
+				open = state
 				if open then body.Visible = true end
 				tween(row, TI_S, { Size = UDim2.new(1, 0, 0, open and 172 or 36) })
 				if not open then task.delay(0.12, function() if not open then body.Visible = false end end) end
-			end)
+			end
+			header.Activated:Connect(function() setOpen(not open) end)
+			el._onLock = function() if open then setOpen(false) end end
 
-			local api = {}
-			function api:Set(c) h, s, v = c:ToHSV(); refresh(true) end
-			function api:Get() return color end
-			api.Instance = row
-			return api
+			function el:Set(c) h, s, v = c:ToHSV(); refresh(true) end
+			function el:Get() return color end
+			return el
 		end
 
 		function Tab:CreateDropdown(dcfg)
@@ -1397,15 +1549,12 @@ function Tab:CreateSlider(slcfg)
 				else selected[dcfg.Default] = true end
 			end
 
-			local row = newRow(36)
+			local el = newElement({ Kind = "Dropdown", Height = 36, Callback = dcfg.Callback })
+			local row = el.Instance
 			row.ClipsDescendants = true
+
 			local header = create("TextButton", { Text = "", BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 36), Parent = row })
-			create("TextLabel", {
-				BackgroundTransparency = 1, Text = dcfg.Name or "Dropdown",
-				FontFace = FONT_MAIN, TextColor3 = Theme.Text, TextSize = 14,
-				TextXAlignment = Enum.TextXAlignment.Left, AnchorPoint = Vector2.new(0, 0.5),
-				Position = UDim2.new(0, 10, 0.5, 0), Size = UDim2.new(0.5, 0, 1, 0), Parent = header,
-			})
+			el:_addLabel({ Text = dcfg.Name or "Dropdown", Size = UDim2.new(0.5, 0, 1, 0), Parent = header })
 			local valLbl = create("TextLabel", {
 				BackgroundTransparency = 1, Text = "",
 				FontFace = FONT_MAIN, TextColor3 = Theme.SubText, TextSize = 13,
@@ -1433,8 +1582,9 @@ function Tab:CreateSlider(slcfg)
 				valLbl.Text = #picked == 0 and "None" or table.concat(picked, ", ")
 			end
 
-			local api = {}
 			local optionBtns = {}
+			local open = false
+			local toggle -- assigned below; option buttons close the list through it
 
 			local function rebuild()
 				for _, b in optionBtns do b.btn:Destroy() end
@@ -1472,18 +1622,16 @@ function Tab:CreateSlider(slcfg)
 							tween(b.txt, TI, { TextColor3 = on and Theme.Accent or Theme.SubText })
 						end
 						updateValLabel()
-						if dcfg.Callback then
-							if multi then
-								local out = {}
-								for _, o in options do if selected[o] then table.insert(out, o) end end
-								task.spawn(dcfg.Callback, out)
-							else
-								task.spawn(dcfg.Callback, opt)
-							end
+						if multi then
+							local out = {}
+							for _, o in options do if selected[o] then table.insert(out, o) end end
+							el:_fire(out)
+						else
+							el:_fire(opt)
 						end
 						if not multi then
 							task.wait(0.05)
-							api._toggle(false)
+							toggle(false)
 						end
 					end)
 					table.insert(optionBtns, { btn = ob, opt = opt, txt = txt, check = check })
@@ -1497,35 +1645,34 @@ function Tab:CreateSlider(slcfg)
 				return 36 + (n * 28) + ((n - 1) * 2) + 8
 			end
 
-			local open = false
-			function api._toggle(force)
+			function toggle(force)
 				if force ~= nil then open = force else open = not open end
 				if open then list.Visible = true end
 				tween(row, TI_S, { Size = UDim2.new(1, 0, 0, open and openHeight() or 36) })
 				tween(chev, TI, { Rotation = open and 180 or 0 })
 				if not open then task.delay(0.12, function() if not open then list.Visible = false end end) end
 			end
-			header.Activated:Connect(function() api._toggle() end)
+			header.Activated:Connect(function() toggle() end)
+			el._onLock = function() if open then toggle(false) end end
 
-			function api:Refresh(newOpts)
+			function el:Refresh(newOpts)
 				options = newOpts or options
 				rebuild()
-				if open then api._toggle(true) end
+				if open then toggle(true) end
 			end
-			function api:Set(val)
+			function el:Set(val)
 				table.clear(selected)
 				if type(val) == "table" then for _, x in val do selected[x] = true end
 				else selected[val] = true end
 				rebuild()
 			end
-			function api:Get()
+			function el:Get()
 				local out = {}
 				for _, o in options do if selected[o] then table.insert(out, o) end end
 				return multi and out or out[1]
 			end
-			api.Instance = row
 			rebuild()
-			return api
+			return el
 		end
 
 		return Tab
@@ -1586,6 +1733,7 @@ end
 
 function Library:Destroy()
 	for _, n in table.clone(activeNotifs) do n:Dismiss() end
+	for _, win in table.clone(Library._windows) do win:_cleanup() end
 	table.clear(Library._windows)
 	ScreenGui:Destroy()
 end
