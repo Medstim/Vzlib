@@ -32,7 +32,7 @@ local DefaultTheme = {
 	Text = Color3.fromRGB(255, 255, 255),
 	SubText = Color3.fromRGB(105, 105, 124),
 
-	Accent = Color3.fromRGB(100, 160, 255),
+	Accent = Color3.fromRGB(0, 92, 240),
 	Success = Color3.fromRGB(90, 205, 130),
 	Warning = Color3.fromRGB(255, 190, 70),
 	WarningBg = Color3.fromRGB(40, 34, 20),
