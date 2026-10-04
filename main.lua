@@ -1332,7 +1332,7 @@ function Tab:CreateStatList(scfg)
 	el:_addLabel({ Text = scfg.Name or "Info Dropdown", Size = UDim2.new(0.8, 0, 1, 0), Parent = header })
 
 	-- Up/Down Chevron Icon
-	local chev = icon("chevron-down", 16, false, Theme.SubText)
+	local chev = icon("chevron-small-down", 16, false, Theme.SubText)
 	chev.AnchorPoint = Vector2.new(1, 0.5)
 	chev.Position = UDim2.new(1, -10, 0.5, 0)
 	chev.Parent = header
@@ -1375,7 +1375,7 @@ function Tab:CreateStatList(scfg)
 		
 		if open then 
 			listContainer.Visible = true 
-			chev.Image = icon("chevron-up", 16, false, Theme.SubText).Image or chev.Image
+			chev.Image = icon("chevron-small-up", 16, false, Theme.SubText).Image or chev.Image
 		end
 		
 		tween(row, TI_S, { Size = UDim2.new(1, 0, 0, open and openHeight() or 36) })
@@ -1385,7 +1385,7 @@ function Tab:CreateStatList(scfg)
 			task.delay(0.12, function() 
 				if not open then 
 					listContainer.Visible = false 
-					chev.Image = icon("chevron-down", 16, false, Theme.SubText).Image or chev.Image
+					chev.Image = icon("chevron-small-down", 16, false, Theme.SubText).Image or chev.Image
 				end 
 			end) 
 		end
@@ -1816,7 +1816,7 @@ end
 				AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -32, 0.5, 0),
 				Size = UDim2.new(0.5, -8, 1, 0), Parent = header,
 			})
-			local chev = icon("chevron-down", 16, false, Theme.SubText)
+			local chev = icon("chevron-small-down", 16, false, Theme.SubText)
 			chev.AnchorPoint = Vector2.new(1, 0.5)
 			chev.Position = UDim2.new(1, -10, 0.5, 0)
 			chev.Parent = header
