@@ -1317,9 +1317,10 @@ function Tab:CreateToggle(tocfg)
 
 function Tab:CreateStatList(scfg)
 	scfg = scfg or {}
-	local HEADER_H = 36
-	local PAD_BOTTOM = 8
-	local GAP = 4
+    local HEADER_H = 36
+    local OUTER = 8
+    local PAD_Y = 6
+    local ROW_H = 22
 
 	local el = newElement({ Kind = "StatList", Height = HEADER_H })
 	local row = el.Instance
