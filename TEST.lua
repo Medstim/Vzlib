@@ -15,28 +15,28 @@ local httpRequest = (syn and syn.request) or (http and http.request) or http_req
 ----------------------------------------------------------------------
 
 local DefaultTheme = {
-	Background = Color3.fromRGB(16, 16, 16),
-	Secondary = Color3.fromRGB(24, 24, 27),
-	Header = Color3.fromRGB(24, 24, 27),
+	Background = Color3.fromRGB(14, 14, 16),
+	Secondary = Color3.fromRGB(20, 20, 23),
+	Header = Color3.fromRGB(22, 22, 26),
 
-	Element = Color3.fromRGB(32, 32, 36),
-	ElementHover = Color3.fromRGB(42, 42, 48),
-	ElementPressed = Color3.fromRGB(50, 50, 58),
+	Element = Color3.fromRGB(30, 30, 35),
+	ElementHover = Color3.fromRGB(40, 40, 47),
+	ElementPressed = Color3.fromRGB(50, 50, 59),
 
-	Off = Color3.fromRGB(50, 50, 55),
+	Off = Color3.fromRGB(52, 52, 60),
 	Knob = Color3.fromRGB(255, 255, 255),
 
-	Stroke = Color3.fromRGB(70, 70, 78),
-	StrokeDim = Color3.fromRGB(45, 45, 50),
+	Stroke = Color3.fromRGB(72, 72, 82),
+	StrokeDim = Color3.fromRGB(42, 42, 48),
 
-	Text = Color3.fromRGB(255, 255, 255),
-	SubText = Color3.fromRGB(81, 100, 134),
+	Text = Color3.fromRGB(240, 240, 245),
+	SubText = Color3.fromRGB(128, 142, 172),
 
-	Accent = Color3.fromRGB(0, 92, 240),
-	Success = Color3.fromRGB(90, 205, 130),
+	Accent = Color3.fromRGB(50, 125, 255),
+	Success = Color3.fromRGB(80, 210, 130),
 	Warning = Color3.fromRGB(255, 190, 70),
-	WarningBg = Color3.fromRGB(40, 34, 20),
-	Error = Color3.fromRGB(255, 90, 90),
+	WarningBg = Color3.fromRGB(42, 35, 20),
+	Error = Color3.fromRGB(255, 95, 95),
 }
 
 local function cloneTheme(source)
@@ -74,75 +74,104 @@ end
 local Themes = {
 	Dark = cloneTheme(DefaultTheme),
 
-	-- Improved Light Theme (Clean, high-contrast, modern slate accents)
 	Light = applyTheme(DefaultTheme, {
-		Background = Color3.fromRGB(245, 246, 250),
-		Secondary = Color3.fromRGB(230, 233, 240),
-		Header = Color3.fromRGB(179, 179, 179),
-		Element = Color3.fromRGB(179, 179, 179),
-		ElementHover = Color3.fromRGB(179, 179, 179),
-		ElementPressed = Color3.fromRGB(179, 179, 179),
-		Off = Color3.fromRGB(205, 210, 220),
-		Stroke = Color3.fromRGB(180, 185, 200),
-		StrokeDim = Color3.fromRGB(215, 220, 230),
-		Text = Color3.fromRGB(136, 162, 241),
-		SubText = Color3.fromRGB(101, 132, 224),
-		Accent = Color3.fromRGB(45, 105, 225),
-		Success = Color3.fromRGB(30, 160, 90),
-		Warning = Color3.fromRGB(210, 130, 0),
-		WarningBg = Color3.fromRGB(255, 242, 210),
-		Error = Color3.fromRGB(220, 50, 50),
+		Background = Color3.fromRGB(243, 244, 248),
+		Secondary = Color3.fromRGB(233, 236, 242),
+		Header = Color3.fromRGB(250, 251, 253),
+
+		Element = Color3.fromRGB(255, 255, 255),
+		ElementHover = Color3.fromRGB(241, 243, 248),
+		ElementPressed = Color3.fromRGB(226, 230, 240),
+
+		Off = Color3.fromRGB(176, 184, 202),
+		Knob = Color3.fromRGB(255, 255, 255),
+
+		Stroke = Color3.fromRGB(140, 150, 175),
+		StrokeDim = Color3.fromRGB(170, 178, 198),
+
+		Text = Color3.fromRGB(22, 24, 32),
+		SubText = Color3.fromRGB(92, 100, 122),
+
+		Accent = Color3.fromRGB(37, 99, 235),
+		Success = Color3.fromRGB(22, 150, 85),
+		Warning = Color3.fromRGB(200, 120, 0),
+		WarningBg = Color3.fromRGB(255, 243, 214),
+		Error = Color3.fromRGB(214, 48, 60),
 	}),
 
 	Glass = applyTheme(DefaultTheme, {
-		Background = Color3.fromRGB(8, 14, 24),
-		Secondary = Color3.fromRGB(16, 28, 46),
-		Header = Color3.fromRGB(14, 40, 66),
-		Element = Color3.fromRGB(24, 46, 74),
-		ElementHover = Color3.fromRGB(34, 62, 98),
-		ElementPressed = Color3.fromRGB(44, 78, 120),
-		Off = Color3.fromRGB(36, 56, 84),
-		Stroke = Color3.fromRGB(80, 140, 200),
-		StrokeDim = Color3.fromRGB(40, 76, 112),
-		Text = Color3.fromRGB(214, 238, 255),
-		SubText = Color3.fromRGB(130, 170, 205),
-		Accent = Color3.fromRGB(0, 195, 255),
-		Success = Color3.fromRGB(60, 230, 150),
-		Error = Color3.fromRGB(255, 80, 100),
+		Background = Color3.fromRGB(7, 13, 23),
+		Secondary = Color3.fromRGB(14, 26, 43),
+		Header = Color3.fromRGB(13, 36, 60),
+
+		Element = Color3.fromRGB(22, 42, 68),
+		ElementHover = Color3.fromRGB(32, 58, 92),
+		ElementPressed = Color3.fromRGB(42, 74, 114),
+
+		Off = Color3.fromRGB(34, 54, 82),
+		Knob = Color3.fromRGB(255, 255, 255),
+
+		Stroke = Color3.fromRGB(78, 138, 198),
+		StrokeDim = Color3.fromRGB(38, 72, 108),
+
+		Text = Color3.fromRGB(220, 240, 255),
+		SubText = Color3.fromRGB(128, 168, 204),
+
+		Accent = Color3.fromRGB(0, 190, 255),
+		Success = Color3.fromRGB(60, 225, 150),
+		Warning = Color3.fromRGB(255, 196, 90),
+		WarningBg = Color3.fromRGB(38, 36, 26),
+		Error = Color3.fromRGB(255, 84, 104),
 	}),
-	
+
 	Midnight = applyTheme(DefaultTheme, {
-		Background = Color3.fromRGB(8, 8, 24),
-		Secondary = Color3.fromRGB(18, 16, 44),
-		Header = Color3.fromRGB(34, 28, 84),
-		Element = Color3.fromRGB(28, 24, 64),
-		ElementHover = Color3.fromRGB(40, 34, 88),
-		ElementPressed = Color3.fromRGB(52, 44, 108),
-		Off = Color3.fromRGB(50, 44, 96),
-		Stroke = Color3.fromRGB(140, 130, 230),
-		StrokeDim = Color3.fromRGB(56, 50, 110),
-		Text = Color3.fromRGB(196, 190, 255),
-		SubText = Color3.fromRGB(149, 139, 238),
-		Accent = Color3.fromRGB(110, 90, 226),
+		Background = Color3.fromRGB(8, 8, 22),
+		Secondary = Color3.fromRGB(16, 15, 40),
+		Header = Color3.fromRGB(30, 25, 76),
+
+		Element = Color3.fromRGB(26, 22, 60),
+		ElementHover = Color3.fromRGB(38, 32, 84),
+		ElementPressed = Color3.fromRGB(50, 42, 104),
+
+		Off = Color3.fromRGB(48, 42, 92),
+		Knob = Color3.fromRGB(255, 255, 255),
+
+		Stroke = Color3.fromRGB(132, 122, 224),
+		StrokeDim = Color3.fromRGB(54, 48, 106),
+
+		Text = Color3.fromRGB(214, 210, 255),
+		SubText = Color3.fromRGB(150, 142, 220),
+
+		Accent = Color3.fromRGB(140, 120, 255),
 		Success = Color3.fromRGB(90, 210, 150),
-		Error = Color3.fromRGB(255, 95, 110),
+		Warning = Color3.fromRGB(255, 190, 80),
+		WarningBg = Color3.fromRGB(42, 34, 28),
+		Error = Color3.fromRGB(255, 100, 115),
 	}),
-	
+
 	Rose = applyTheme(DefaultTheme, {
-		Background = Color3.fromRGB(22, 10, 16),
-		Secondary = Color3.fromRGB(40, 18, 28),
-		Header = Color3.fromRGB(74, 24, 48),
-		Element = Color3.fromRGB(52, 24, 38),
-		ElementHover = Color3.fromRGB(66, 32, 48),
-		ElementPressed = Color3.fromRGB(80, 40, 58),
-		Off = Color3.fromRGB(84, 48, 64),
-		Stroke = Color3.fromRGB(210, 120, 150),
-		StrokeDim = Color3.fromRGB(96, 50, 68),
-		Text = Color3.fromRGB(255, 222, 234),
-		SubText = Color3.fromRGB(206, 150, 170),
-		Accent = Color3.fromRGB(255, 105, 150),
+		Background = Color3.fromRGB(21, 10, 15),
+		Secondary = Color3.fromRGB(36, 17, 26),
+		Header = Color3.fromRGB(66, 22, 43),
+
+		Element = Color3.fromRGB(48, 23, 35),
+		ElementHover = Color3.fromRGB(62, 30, 45),
+		ElementPressed = Color3.fromRGB(76, 38, 55),
+
+		Off = Color3.fromRGB(80, 46, 62),
+		Knob = Color3.fromRGB(255, 255, 255),
+
+		Stroke = Color3.fromRGB(205, 118, 148),
+		StrokeDim = Color3.fromRGB(90, 48, 65),
+
+		Text = Color3.fromRGB(255, 228, 238),
+		SubText = Color3.fromRGB(206, 150, 172),
+
+		Accent = Color3.fromRGB(255, 110, 155),
 		Success = Color3.fromRGB(110, 215, 150),
-		Error = Color3.fromRGB(255, 110, 110),
+		Warning = Color3.fromRGB(255, 196, 100),
+		WarningBg = Color3.fromRGB(46, 32, 22),
+		Error = Color3.fromRGB(255, 100, 90),
 	}),
 }
 
@@ -778,7 +807,7 @@ function Library:CreateWindow(cfg)
 	-- Bottom divider line for TopBar separation
 	create("Frame", {
 		Name = "TopBarDivider",
-		Theme.StrokeDim,
+		BackgroundColor3 = Theme.StrokeDim,
 		BackgroundTransparency = STROKE_T,
 		BorderSizePixel = 0,
 		Position = UDim2.new(0, 0, 1, -1),
@@ -1038,7 +1067,7 @@ local menuList = create("ScrollingFrame", {
 	})
 
 	create("Frame", {
-		Name = "SideDivider", Theme.StrokeDim, BackgroundTransparency = STROKE_T,
+		Name = "SideDivider", BackgroundColor3 = Theme.StrokeDim, BackgroundTransparency = STROKE_T,
 		BorderSizePixel = 0, Position = UDim2.new(0, SIDEBAR_W, 0, 0), Size = UDim2.new(0, 1, 1, 0),
 		ZIndex = 2, Parent = Body,
 	})
@@ -1060,7 +1089,7 @@ local menuList = create("ScrollingFrame", {
 
 		-- Divider that separates the footer from the tab list
 		create("Frame", {
-			BackgroundColor3 = Theme.Stroke, BackgroundTransparency = STROKE_T,
+			BackgroundColor3 = Theme.StrokeDim, BackgroundTransparency = STROKE_T,
 			BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, 1), Parent = footer,
 		})
 
@@ -1119,6 +1148,14 @@ local menuList = create("ScrollingFrame", {
 			return string.format("%02d:%02d", t.hour, t.min)
 		end
 		timeLbl.Text = currentTime()
+		local clockAlive = true
+		table.insert(Window._cleanups, function() clockAlive = false end)
+		task.spawn(function()
+			while clockAlive and timeLbl.Parent do
+				task.wait(60 - (os.date("*t").sec % 60))
+				if clockAlive and timeLbl.Parent then timeLbl.Text = currentTime() end
+			end
+		end)
 		
 		-- Switch format at any time, e.g. Window:SetTimeFormat("12h")
 		function Window:SetTimeFormat(fmt)
@@ -2184,7 +2221,7 @@ end
 				Size = UDim2.new(1, 0, 0, 0), LayoutOrder = 2, Parent = holder,
 			})
 			create("Frame", {
-				Theme.StrokeDim, BackgroundTransparency = STROKE_T,
+				BackgroundColor3 = Theme.StrokeDim, BackgroundTransparency = STROKE_T,
 				BorderSizePixel = 0, Position = UDim2.new(0, PAD, 0, 0),
 				Size = UDim2.new(1, -PAD * 2, 0, 1), Parent = body,
 			})
