@@ -209,7 +209,7 @@ Scope.__index = Scope
 local function newScope(base)
 	local scope = setmetatable({
 		colors = cloneTheme(base),
-		bindings = setmetatable({}, { __mode = "k" }),
+		bindings = {},
 		listeners = {},
 		_nextId = 0,
 	}, Scope)
@@ -238,6 +238,7 @@ function Scope:Bind(inst, prop, binding)
 	if not props then
 		props = {}
 		self.bindings[inst] = props
+		inst.Destroying:Connect(function() self.bindings[inst] = nil end)
 	end
 	props[prop] = binding
 	inst[prop] = evalBinding(self, binding)
@@ -257,7 +258,9 @@ end
 
 function Scope:Refresh(animate)
 	for inst, props in pairs(self.bindings) do
-		if inst.Parent then
+		if inst.Parent == nil then
+			self.bindings[inst] = nil
+		else
 			for prop in pairs(props) do
 				local ok, err = pcall(self.Update, self, inst, prop, animate and THEME_TI or nil)
 				if not ok then
@@ -1211,7 +1214,7 @@ local menuList = create("ScrollingFrame", {
 		local Tab = {
 			_elements = {},
 			_parent = nil,
-			_orders = setmetatable({}, { __mode = "k" }),
+			_orders = {},
 		}
 
 		local Theme = scope.refs
