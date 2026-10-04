@@ -39,7 +39,6 @@ local DefaultTheme = {
 	Error = Color3.fromRGB(255, 90, 90),
 }
 
-
 local function cloneTheme(source)
 	local theme = {}
 	for key, value in pairs(source) do
@@ -79,15 +78,15 @@ local Themes = {
 	Light = applyTheme(DefaultTheme, {
 		Background = Color3.fromRGB(245, 246, 250),
 		Secondary = Color3.fromRGB(230, 233, 240),
-		Header = Color3.fromRGB(146, 145, 145),
-		Element = Color3.fromRGB(146, 145, 145),
-		ElementHover = Color3.fromRGB(146, 145, 145),
-		ElementPressed = Color3.fromRGB(146, 145, 145),
+		Header = Color3.fromRGB(179, 179, 179),
+		Element = Color3.fromRGB(179, 179, 179),
+		ElementHover = Color3.fromRGB(179, 179, 179),
+		ElementPressed = Color3.fromRGB(179, 179, 179),
 		Off = Color3.fromRGB(205, 210, 220),
 		Stroke = Color3.fromRGB(180, 185, 200),
 		StrokeDim = Color3.fromRGB(215, 220, 230),
-		Text = Color3.fromRGB(66, 74, 99),
-		SubText = Color3.fromRGB(107, 141, 243),
+		Text = Color3.fromRGB(136, 162, 241),
+		SubText = Color3.fromRGB(101, 132, 224),
 		Accent = Color3.fromRGB(45, 105, 225),
 		Success = Color3.fromRGB(30, 160, 90),
 		Warning = Color3.fromRGB(210, 130, 0),
@@ -1062,7 +1061,7 @@ local menuList = create("ScrollingFrame", {
 			Parent = card,
 		})
 		corner(avatar, 16) -- fully round
-		stroke(avatar, Theme.Accent, 0.45)
+		stroke(avatar, Theme.Accent, 0.3)
 
 		local textHolder = create("Frame", {
 			BackgroundTransparency = 1,
@@ -1090,21 +1089,23 @@ local menuList = create("ScrollingFrame", {
 		})
 
 		-- Local time, refreshed once a minute on the minute
-		local use12h = (cfg.TimeFormat or "24h") == "12h"
+		local use12h = tostring(cfg.TimeFormat or "24h"):lower():find("12") ~= nil
 		local function currentTime()
-			return os.date(use24h and "%I:%M %p" or "%H:%M")
+			local t = os.date("*t")
+			if use12h then
+				local h = t.hour % 12
+				if h == 0 then h = 12 end
+				return string.format("%d:%02d %s", h, t.min, t.hour >= 12 and "PM" or "AM")
+			end
+			return string.format("%02d:%02d", t.hour, t.min)
 		end
 		timeLbl.Text = currentTime()
-
-		local alive = true
-		table.insert(Window._cleanups, function() alive = false end)
-		task.spawn(function()
-			while alive do
-				task.wait(60 - (os.time() % 60) + 0.05)
-				if not alive then break end
-				timeLbl.Text = currentTime()
-			end
-		end)
+		
+		-- Switch format at any time, e.g. Window:SetTimeFormat("12h")
+		function Window:SetTimeFormat(fmt)
+			use12h = tostring(fmt):lower():find("12") ~= nil
+			timeLbl.Text = currentTime()
+		end
 	end
 
 	table.insert(Window._cleanups, makeDraggable(BG, TopBar))
