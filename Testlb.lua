@@ -658,6 +658,9 @@ function Library:CreateWindow(cfg)
 	local scope = newScope(GlobalScope.colors)
 	local overrides = {}
 
+    local winSize = typeof(cfg.Size) == "Vector2" and cfg.Size or Vector2.new(680, 440)
+	local WIN_W, WIN_H = winSize.X, winSize.Y
+
 	local Window = { Tabs = {}, _current = nil, _scope = scope, _overrides = overrides, _cleanups = {} }
 	Window.ErrorNotifications = cfg.ErrorNotifications ~= false
 	Window.OnError = cfg.OnError
@@ -704,7 +707,7 @@ function Library:CreateWindow(cfg)
 		Name = "Window",
 		AnchorPoint = Vector2.new(0.5, 0.5),
 		Position = UDim2.new(0.5, 0, 0.5, 0),
-		Size = UDim2.fromOffset(540, 420),
+		Size = UDim2.fromOffset(WIN_W, WIN_H),
 		BackgroundColor3 = Theme.Background,
 		BackgroundTransparency = 0.02,
 		BorderSizePixel = 0,
@@ -829,19 +832,18 @@ function Library:CreateWindow(cfg)
 	corner(settingsMenu, 8)
 	stroke(settingsMenu, Theme.Stroke, STROKE_T)
 
-	local menuList = create("ScrollingFrame", {
-		BackgroundTransparency = 1,
-		Size = UDim2.new(1, 0, 1, 0),
-		CanvasSize = UDim2.new(),
-		AutomaticCanvasSize = Enum.AutomaticSize.Y,
-		ScrollBarThickness = 2,
-		ScrollBarImageColor3 = Theme.Stroke,
-		BorderSizePixel = 0,
-		Parent = settingsMenu,
-	}, {
-		create("UIListLayout", { Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder }),
-		create("UIPadding", { PaddingTop = UDim.new(0, 8), PaddingBottom = UDim.new(0, 8), PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8) }),
-	})
+local MAX_VISIBLE = dcfg.MaxVisible or 6
+local list = create("ScrollingFrame", {
+	BackgroundTransparency = 1, BorderSizePixel = 0,
+	Position = UDim2.new(0, 0, 0, 36),
+	Size = UDim2.new(1, 0, 0, 0),
+	CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y,
+	ScrollBarThickness = 2, ScrollBarImageColor3 = Theme.Stroke,
+	Visible = false, Parent = row,
+}, {
+	create("UIListLayout", { Padding = UDim.new(0, 2), SortOrder = Enum.SortOrder.LayoutOrder }),
+	create("UIPadding", { PaddingLeft = UDim.new(0,8), PaddingRight = UDim.new(0,8), PaddingBottom = UDim.new(0,8) }),
+})
 
 	local function addMenuHeader(text)
 		create("TextLabel", {
@@ -889,7 +891,7 @@ function Library:CreateWindow(cfg)
 	end
 
 	addMenuHeader("TOGGLE KEYBIND")
-
+    local hidden = false
 	local currentToggleKey = cfg.ToggleKey or Enum.KeyCode.RightShift
 	local bindingHotkey = false
 
@@ -928,7 +930,6 @@ function Library:CreateWindow(cfg)
 				bindingHotkey = false
 				keyLbl.Text = "Key: " .. currentToggleKey.Name
 				
-                local hidden = false
 				if toggleConn then toggleConn:Disconnect() end
 				toggleConn = UserInputService.InputBegan:Connect(function(newInp, newGp)
 					if newGp then return end
@@ -961,7 +962,7 @@ function Library:CreateWindow(cfg)
 	-- Body
 	local Body = create("Frame", {
 		Name = "Body", BackgroundTransparency = 1,
-		Position = UDim2.new(0, 0, 0, 45), Size = UDim2.new(1, 0, 1, -42),
+		Position = UDim2.new(0, 0, 0, 45), Size = UDim2.new(1, 0, 1, -45),
 		Parent = BG,
 	})
 
@@ -1009,14 +1010,13 @@ function Library:CreateWindow(cfg)
 		minimized = not minimized
 		if minimized then
 			Body.Visible = false
-			tween(BG, TI_S, { Size = UDim2.fromOffset(540, 45) })
+			tween(BG, TI_S, { Size = UDim2.fromOffset(WIN_W, 45) })
 		else
-			tween(BG, TI_S, { Size = UDim2.fromOffset(540, 420) })
+			tween(BG, TI_S, { Size = UDim2.fromOffset(WIN_W, WIN_H) })
 			task.wait(0.12); Body.Visible = true
 		end
 	end)
 
-	local hidden = false
 	toggleConn = UserInputService.InputBegan:Connect(function(inp, gp)
 		if gp then return end
 		if inp.KeyCode == currentToggleKey then
@@ -1030,7 +1030,11 @@ function Library:CreateWindow(cfg)
 	----------------------------------------------------------------
 	function Window:CreateTab(tcfg)
 		tcfg = tcfg or {}
-		local Tab = { _order = 0, _elements = {} }
+		local Tab = {
+			_elements = {},
+			_parent = nil,
+			_orders = setmetatable({}, { __mode = "k" }),
+		}
 
 		local Theme = scope.refs
 
@@ -1117,18 +1121,19 @@ function Library:CreateWindow(cfg)
 		--   :_addLabel(props)  :_fire(...)  :_own(connOrFn)
 		-- opts: Kind, Height, Class ("Frame"|"TextButton"), Plain, AutoY, Callback
 		------------------------------------------------------------
-		local function newElement(opts)
-			opts = opts or {}
-			Tab._order += 1
+       local function newElement(opts)
+	   opts = opts or {}
+	   local parent = Tab._parent or page
+	    Tab._orders[parent] = (Tab._orders[parent] or 0) + 1
 
-			local props = {
-				BackgroundColor3 = Theme.Element,
-				BackgroundTransparency = opts.Plain and 1 or 0,
-				Size = UDim2.new(1, 0, 0, opts.Height or 34),
-				LayoutOrder = Tab._order,
-				BorderSizePixel = 0,
-				Parent = page,
-			}
+	    local props = {
+		BackgroundColor3 = Theme.Element,
+		BackgroundTransparency = opts.Plain and 1 or 0,
+		Size = UDim2.new(1, 0, 0, opts.Height or 34),
+		LayoutOrder = Tab._orders[parent],
+		BorderSizePixel = 0,
+		Parent = parent,
+	    }
 			if opts.AutoY then props.AutomaticSize = Enum.AutomaticSize.Y end
 			if opts.Class == "TextButton" then
 				props.Text = ""
@@ -1373,11 +1378,11 @@ function Tab:CreateStatList(scfg)
 	local order = 0
 	local open = false
 
-	local function openHeight()
-		local n = 0
-		for _ in pairs(items) do n += 1 end
-		return HEADER_H + math.max(n, 1) * ROW_H + PAD_Y * 2 + OUTER
-	end
+    local function openHeight()
+	     local n = math.min(#options, MAX_VISIBLE)
+	     if n == 0 then return 44 end
+	    return 36 + (n * 28) + ((n - 1) * 2) + 8
+    end
 
 	local function applySize()
 		local target = open and openHeight() or HEADER_H
@@ -1706,7 +1711,7 @@ end
 			}, {
 				create("UISizeConstraint", {
 					MinSize = Vector2.new(txcfg.MinWidth or 56, 0),
-					MaxSize = Vector2.new(txcfg.MaxWidth or 180, math.huge),
+					MaxSize = Vector2.new(txcfg.MaxWidth or 110, math.huge),
 				}),
 			})
 			tb.Focused:Connect(function() tween(tbStroke, TI, { Color = Theme.Accent, Transparency = 0.2 }) end)
@@ -1831,13 +1836,18 @@ end
 			row.ClipsDescendants = true
 
 			local header = create("TextButton", { Text = "", BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 36), Parent = row })
-			el:_addLabel({ Text = dcfg.Name or "Dropdown", Size = UDim2.new(0.5, 0, 1, 0), Parent = header })
+			el:_addLabel({
+				Text = dcfg.Name or "Dropdown",
+				TextTruncate = Enum.TextTruncate.AtEnd,
+				Size = UDim2.new(0.5, -10, 1, 0),
+				Parent = header,
+			})
 			local valLbl = create("TextLabel", {
 				BackgroundTransparency = 1, Text = "",
 				FontFace = FONT_MAIN, TextColor3 = Theme.SubText, TextSize = 13,
 				TextXAlignment = Enum.TextXAlignment.Right, TextTruncate = Enum.TextTruncate.AtEnd,
 				AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -32, 0.5, 0),
-				Size = UDim2.new(0.5, -8, 1, 0), Parent = header,
+				Size = UDim2.new(0.5, -42, 1, 0), Parent = header,
 			})
 			local chev = icon("chevron-small-down", 16, false, Theme.SubText)
 			chev.AnchorPoint = Vector2.new(1, 0.5)
@@ -1924,7 +1934,7 @@ end
 
 			function toggle(force)
 				if force ~= nil then open = force else open = not open end
-				if open then list.Visible = true end
+				if open then list.Visible = true; list.Size = UDim2.new(1, 0, 0, openHeight() - 36) end
 				tween(row, TI_S, { Size = UDim2.new(1, 0, 0, open and openHeight() or 36) })
 				tween(chev, TI, { Rotation = open and 180 or 0 })
 				if not open then task.delay(0.12, function() if not open then list.Visible = false end end) end
@@ -1950,6 +1960,191 @@ end
 			end
 			rebuild()
 			return el
+		end
+        ------------------------------------------------------------
+		-- Containers, Sections, Columns
+		------------------------------------------------------------
+		local ELEMENT_METHODS = {
+			"CreateLabel", "CreateWarning", "CreateButton", "CreateStatList",
+			"CreateToggle", "CreateStat", "CreateSlider", "CreateTextbox",
+			"CreateColorPicker", "CreateDropdown",
+		}
+		
+		local makeContainer
+		
+		local function buildSection(parent, scfg)
+			if type(scfg) == "string" then scfg = { Name = scfg } end
+			scfg = scfg or {}
+		
+			local HEADER_H, PAD = 36, 8
+			local open = scfg.Open ~= false
+		
+			Tab._orders[parent] = (Tab._orders[parent] or 0) + 1
+		
+			local holder = create("Frame", {
+				BackgroundColor3 = Theme.Element,
+				BorderSizePixel = 0,
+				Size = UDim2.new(1, 0, 0, 0),
+				AutomaticSize = Enum.AutomaticSize.Y,
+				LayoutOrder = Tab._orders[parent],
+				Parent = parent,
+			}, {
+				create("UIListLayout", { SortOrder = Enum.SortOrder.LayoutOrder }),
+			})
+			corner(holder, 6)
+			stroke(holder, Theme.Stroke, STROKE_T)
+		
+			-- Header
+			local header = create("TextButton", {
+				Text = "", AutoButtonColor = false, BackgroundTransparency = 1,
+				Size = UDim2.new(1, 0, 0, HEADER_H), LayoutOrder = 1, Parent = holder,
+			})
+		
+			local hasIcon = scfg.Icon ~= nil and scfg.Icon ~= ""
+			if hasIcon then
+				local ic = icon(scfg.Icon, 16, false, Theme.SubText)
+				ic.AnchorPoint = Vector2.new(0, 0.5)
+				ic.Position = UDim2.new(0, 10, 0.5, 0)
+				ic.Parent = header
+			end
+		
+			local leftX = hasIcon and 34 or 12
+			local titleLbl = create("TextLabel", {
+				BackgroundTransparency = 1, Text = scfg.Name or "Section",
+				FontFace = FONT_MAIN, TextColor3 = Theme.Text, TextSize = 14,
+				TextXAlignment = Enum.TextXAlignment.Left,
+				TextTruncate = Enum.TextTruncate.AtEnd,
+				AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, leftX, 0.5, 0),
+				Size = UDim2.new(1, -(leftX + 34), 1, 0), Parent = header,
+			})
+		
+			local chev = icon("chevron-small-down", 16, false, Theme.SubText)
+			chev.AnchorPoint = Vector2.new(0.5, 0.5)
+			chev.Position = UDim2.new(1, -18, 0.5, 0)
+			chev.Rotation = open and 180 or 0
+			chev.Parent = header
+		
+			-- Body (clips + animated height)
+			local body = create("Frame", {
+				BackgroundTransparency = 1, ClipsDescendants = true,
+				Size = UDim2.new(1, 0, 0, 0), LayoutOrder = 2, Parent = holder,
+			})
+			create("Frame", {
+				BackgroundColor3 = Theme.Stroke, BackgroundTransparency = STROKE_T,
+				BorderSizePixel = 0, Position = UDim2.new(0, PAD, 0, 0),
+				Size = UDim2.new(1, -PAD * 2, 0, 1), Parent = body,
+			})
+			local content = create("Frame", {
+				BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 0),
+				AutomaticSize = Enum.AutomaticSize.Y, Parent = body,
+			}, {
+				create("UIPadding", {
+					PaddingTop = UDim.new(0, PAD), PaddingBottom = UDim.new(0, PAD),
+					PaddingLeft = UDim.new(0, PAD), PaddingRight = UDim.new(0, PAD),
+				}),
+			})
+			local layout = create("UIListLayout", {
+				Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder, Parent = content,
+			})
+		
+			local function bodyHeight() return layout.AbsoluteContentSize.Y + PAD * 2 end
+		
+			local function setOpen(state, instant)
+				open = state
+				local size = UDim2.new(1, 0, 0, open and bodyHeight() or 0)
+				local rot = open and 180 or 0
+				if instant then
+					body.Size = size
+					chev.Rotation = rot
+				else
+					tween(body, TI_S, { Size = size })
+					tween(chev, TI, { Rotation = rot })
+				end
+			end
+		
+			-- Keep an open section fitted as elements are added/removed/expanded
+			layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+				if open then body.Size = UDim2.new(1, 0, 0, bodyHeight()) end
+			end)
+		
+			header.Activated:Connect(function() setOpen(not open) end)
+			header.MouseEnter:Connect(function() tween(chev, TI, { TextColor3 = Theme.Text }) end)
+			header.MouseLeave:Connect(function() tween(chev, TI, { TextColor3 = Theme.SubText }) end)
+			setOpen(open, true)
+		
+			local section = makeContainer(content)
+			section.Instance = holder
+			function section:Open() setOpen(true) end
+			function section:Close() setOpen(false) end
+			function section:Toggle() setOpen(not open) end
+			function section:IsOpen() return open end
+			function section:SetName(t) titleLbl.Text = tostring(t) end
+			function section:SetVisible(v) holder.Visible = v ~= false end
+			return section
+		end
+		
+		-- A container exposes every Create* method but parents the result
+		-- into its own frame instead of the tab page.
+		function makeContainer(frame)
+			local container = { Instance = frame }
+			for _, name in ipairs(ELEMENT_METHODS) do
+				container[name] = function(_, ...)
+					local prev = Tab._parent
+					Tab._parent = frame
+					local ok, result = pcall(Tab[name], Tab, ...)
+					Tab._parent = prev
+					if not ok then error(result, 2) end
+					return result
+				end
+			end
+			function container:CreateSection(scfg)
+				return buildSection(frame, scfg)
+			end
+			return container
+		end
+		
+		-- Full-width section directly on the tab
+		function Tab:CreateSection(scfg)
+			return buildSection(Tab._parent or page, scfg)
+		end
+		
+		-- Two side-by-side columns sharing the tab's scroller.
+		-- Can be called more than once (e.g. columns, full-width section, columns).
+		function Tab:CreateColumns()
+			local GAP = 8
+			Tab._orders[page] = (Tab._orders[page] or 0) + 1
+		
+			local holder = create("Frame", {
+				BackgroundTransparency = 1,
+				Size = UDim2.new(1, 0, 0, 0),
+				AutomaticSize = Enum.AutomaticSize.Y,
+				LayoutOrder = Tab._orders[page],
+				Parent = page,
+			}, {
+				create("UIListLayout", {
+					FillDirection = Enum.FillDirection.Horizontal,
+					VerticalAlignment = Enum.VerticalAlignment.Top,
+					Padding = UDim.new(0, GAP),
+					SortOrder = Enum.SortOrder.LayoutOrder,
+				}),
+			})
+		
+			local function column(order)
+				return create("Frame", {
+					BackgroundTransparency = 1,
+					Size = UDim2.new(0.5, -GAP / 2, 0, 0),
+					AutomaticSize = Enum.AutomaticSize.Y,
+					LayoutOrder = order,
+					Parent = holder,
+				}, {
+					create("UIListLayout", {
+						Padding = UDim.new(0, GAP),
+						SortOrder = Enum.SortOrder.LayoutOrder,
+					}),
+				})
+			end
+		
+			return makeContainer(column(1)), makeContainer(column(2))
 		end
 
 		return Tab
