@@ -1324,7 +1324,7 @@ function Tab:CreateStatList(scfg)
 	local HEADER_H = 36
 	local OUTER = 8       -- gap between paper and element edges
 	local PAD_Y = 6       -- paper top/bottom padding
-	local ROW_H = 22
+	local ROW_H = 20
 	local NOTE_FONT = Font.fromEnum(Enum.Font.Code)
 
 	local el = newElement({ Kind = "StatList", Height = HEADER_H })
