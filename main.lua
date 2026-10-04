@@ -3,6 +3,8 @@ local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local HttpService = game:GetService("HttpService")
 
+local Players = game:GetService("Players")
+
 -- Executor globals
 local setClipboard = setclipboard or toclipboard or writeclipboard or write_clipboard
 	or (syn and syn.write_clipboard) or (Clipboard and Clipboard.set)
@@ -28,9 +30,9 @@ local DefaultTheme = {
 	StrokeDim = Color3.fromRGB(45, 45, 50),
 
 	Text = Color3.fromRGB(255, 255, 255),
-	SubText = Color3.fromRGB(160, 160, 175),
+	SubText = Color3.fromRGB(81, 100, 134),
 
-	Accent = Color3.fromRGB(100, 160, 255),
+	Accent = Color3.fromRGB(0, 92, 240),
 	Success = Color3.fromRGB(90, 205, 130),
 	Warning = Color3.fromRGB(255, 190, 70),
 	WarningBg = Color3.fromRGB(40, 34, 20),
@@ -76,15 +78,15 @@ local Themes = {
 	Light = applyTheme(DefaultTheme, {
 		Background = Color3.fromRGB(245, 246, 250),
 		Secondary = Color3.fromRGB(230, 233, 240),
-		Header = Color3.fromRGB(222, 227, 238),
-		Element = Color3.fromRGB(255, 255, 255),
-		ElementHover = Color3.fromRGB(238, 240, 246),
-		ElementPressed = Color3.fromRGB(225, 228, 238),
+		Header = Color3.fromRGB(179, 179, 179),
+		Element = Color3.fromRGB(179, 179, 179),
+		ElementHover = Color3.fromRGB(179, 179, 179),
+		ElementPressed = Color3.fromRGB(179, 179, 179),
 		Off = Color3.fromRGB(205, 210, 220),
 		Stroke = Color3.fromRGB(180, 185, 200),
 		StrokeDim = Color3.fromRGB(215, 220, 230),
-		Text = Color3.fromRGB(20, 22, 28),
-		SubText = Color3.fromRGB(90, 95, 110),
+		Text = Color3.fromRGB(136, 162, 241),
+		SubText = Color3.fromRGB(101, 132, 224),
 		Accent = Color3.fromRGB(45, 105, 225),
 		Success = Color3.fromRGB(30, 160, 90),
 		Warning = Color3.fromRGB(210, 130, 0),
@@ -119,9 +121,9 @@ local Themes = {
 		Off = Color3.fromRGB(50, 44, 96),
 		Stroke = Color3.fromRGB(140, 130, 230),
 		StrokeDim = Color3.fromRGB(56, 50, 110),
-		Text = Color3.fromRGB(222, 218, 255),
-		SubText = Color3.fromRGB(150, 144, 205),
-		Accent = Color3.fromRGB(140, 120, 255),
+		Text = Color3.fromRGB(196, 190, 255),
+		SubText = Color3.fromRGB(149, 139, 238),
+		Accent = Color3.fromRGB(110, 90, 226),
 		Success = Color3.fromRGB(90, 210, 150),
 		Error = Color3.fromRGB(255, 95, 110),
 	}),
@@ -663,7 +665,7 @@ function Library:CreateWindow(cfg)
 	local scope = newScope(GlobalScope.colors)
 	local overrides = {}
 
-    local winSize = typeof(cfg.Size) == "Vector2" and cfg.Size or Vector2.new(680, 440)
+	local winSize = typeof(cfg.Size) == "Vector2" and cfg.Size or Vector2.new(780, 460)
 	local WIN_W, WIN_H = winSize.X, winSize.Y
 
 	local Window = { Tabs = {}, _current = nil, _scope = scope, _overrides = overrides, _cleanups = {} }
@@ -671,7 +673,31 @@ function Library:CreateWindow(cfg)
 	Window.OnError = cfg.OnError
 
 	-- Releases every global connection owned by this window and its elements.
+	Window._destroyCallbacks = {}
+	if type(cfg.OnDestroy) == "function" then
+		table.insert(Window._destroyCallbacks, cfg.OnDestroy)
+	end
+	
+	-- Runs when the window closes (X button, Window:Destroy, or Library:Destroy)
+	function Window:OnDestroy(fn)
+		if type(fn) == "function" then
+			table.insert(self._destroyCallbacks, fn)
+		end
+	end
+	
+	-- Releases every global connection owned by this window and its elements,
+	-- and fires the OnDestroy callbacks. Safe to call more than once.
 	function Window:_cleanup()
+		if self._cleaned then return end
+		self._cleaned = true
+	
+		for _, fn in table.clone(self._destroyCallbacks) do
+			task.spawn(function()
+				local ok, err = pcall(fn)
+				if not ok then warn("[VaehzUI] OnDestroy callback errored: " .. tostring(err)) end
+			end)
+		end
+	
 		runCleanups(self._cleanups)
 		for _, tab in self.Tabs do
 			for _, el in tab._elements do el:_disconnect() end
@@ -772,7 +798,7 @@ function Library:CreateWindow(cfg)
 
 	local titleLbl = create("TextLabel", {
 		Name = "Title",
-		Text = cfg.Title or "VaehzUI",
+		Text = cfg.Title or "MIZZ X",
 		FontFace = FONT_TITLE,
 		TextColor3 = Theme.Text,
 		TextSize = 15,
@@ -857,7 +883,7 @@ local menuList = create("ScrollingFrame", {
 			Text = text,
 			FontFace = FONT_TITLE,
 			TextColor3 = Theme.SubText,
-			TextSize = 11,
+			TextSize = 10,
 			TextXAlignment = Enum.TextXAlignment.Left,
 			Size = UDim2.new(1, 0, 0, 14),
 			Parent = menuList,
@@ -897,7 +923,7 @@ local menuList = create("ScrollingFrame", {
 	end
 
 	addMenuHeader("TOGGLE KEYBIND")
-    local hidden = false
+	local hidden = false
 	local currentToggleKey = cfg.ToggleKey or Enum.KeyCode.RightShift
 	local bindingHotkey = false
 
@@ -971,11 +997,13 @@ local menuList = create("ScrollingFrame", {
 		Position = UDim2.new(0, 0, 0, 45), Size = UDim2.new(1, 0, 1, -45),
 		Parent = BG,
 	})
+    local SIDEBAR_W = cfg.SidebarWidth or 160
+    local PROFILE_H = (cfg.Profile == false) and 0 or 60
 
 	-- Tab list
 	local TabList = create("ScrollingFrame", {
 		Name = "TabList", BackgroundColor3 = Theme.Secondary, BackgroundTransparency = 0.2,
-		BorderSizePixel = 0, Size = UDim2.new(0, 140, 1, 0),
+		BorderSizePixel = 0, Size = UDim2.new(0, SIDEBAR_W, 1, -PROFILE_H),
 		CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y,
 		ScrollBarThickness = 3, ScrollBarImageColor3 = Theme.Stroke, ScrollBarImageTransparency = 0.5,
 		Parent = Body,
@@ -986,15 +1014,99 @@ local menuList = create("ScrollingFrame", {
 
 	local Content = create("Frame", {
 		Name = "Content", BackgroundTransparency = 1,
-		Position = UDim2.new(0, 141, 0, 0), Size = UDim2.new(1, -141, 1, 0),
+		Position = UDim2.new(0, SIDEBAR_W + 1, 0, 0), Size = UDim2.new(1, -(SIDEBAR_W + 1), 1, 0),
 		Parent = Body,
 	})
 
 	create("Frame", {
 		Name = "SideDivider", BackgroundColor3 = Theme.Stroke, BackgroundTransparency = STROKE_T,
-		BorderSizePixel = 0, Position = UDim2.new(0, 140, 0, 0), Size = UDim2.new(0, 1, 1, 0),
+		BorderSizePixel = 0, Position = UDim2.new(0, SIDEBAR_W, 0, 0), Size = UDim2.new(0, 1, 1, 0),
 		ZIndex = 2, Parent = Body,
 	})
+	----------------------------------------------------------------
+	-- Profile footer (avatar + name + local time)
+	----------------------------------------------------------------
+	if PROFILE_H > 0 then
+		local lp = Players.LocalPlayer
+
+		local footer = create("Frame", {
+			Name = "Profile",
+			BackgroundColor3 = Theme.Secondary,
+			BackgroundTransparency = 0.2,
+			BorderSizePixel = 0,
+			Position = UDim2.new(0, 0, 1, -PROFILE_H),
+			Size = UDim2.new(0, SIDEBAR_W, 0, PROFILE_H),
+			Parent = Body,
+		})
+
+		-- Divider that separates the footer from the tab list
+		create("Frame", {
+			BackgroundColor3 = Theme.Stroke, BackgroundTransparency = STROKE_T,
+			BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, 1), Parent = footer,
+		})
+
+		local card = create("Frame", {
+			BackgroundColor3 = Theme.Element, BorderSizePixel = 0,
+			AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.5, 1),
+			Size = UDim2.new(1, -16, 1, -16), Parent = footer,
+		})
+		corner(card, 8)
+		stroke(card, Theme.Stroke, STROKE_T)
+
+		local avatar = create("ImageLabel", {
+			BackgroundColor3 = Theme.Off, BorderSizePixel = 0,
+			AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 6, 0.5, 0),
+			Size = UDim2.fromOffset(32, 32),
+			Image = ("rbxthumb://type=AvatarHeadShot&id=%d&w=150&h=150"):format(lp.UserId),
+			Parent = card,
+		})
+		corner(avatar, 16) -- fully round
+		stroke(avatar, Theme.Accent, 0.3)
+
+		local textHolder = create("Frame", {
+			BackgroundTransparency = 1,
+			Position = UDim2.new(0, 44, 0, 0), Size = UDim2.new(1, -50, 1, 0),
+			Parent = card,
+		}, {
+			create("UIListLayout", {
+				VerticalAlignment = Enum.VerticalAlignment.Center,
+				Padding = UDim.new(0, 1), SortOrder = Enum.SortOrder.LayoutOrder,
+			}),
+		})
+
+		create("TextLabel", {
+			BackgroundTransparency = 1, Text = lp.DisplayName,
+			FontFace = FONT_TITLE, TextColor3 = Theme.Text, TextSize = 13,
+			TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd,
+			Size = UDim2.new(1, 0, 0, 16), LayoutOrder = 1, Parent = textHolder,
+		})
+
+		local timeLbl = create("TextLabel", {
+			BackgroundTransparency = 1, Text = "",
+			FontFace = FONT_MAIN, TextColor3 = Theme.SubText, TextSize = 12,
+			TextXAlignment = Enum.TextXAlignment.Left,
+			Size = UDim2.new(1, 0, 0, 14), LayoutOrder = 2, Parent = textHolder,
+		})
+
+		-- Local time, refreshed once a minute on the minute
+		local use12h = tostring(cfg.TimeFormat or "24h"):lower():find("12") ~= nil
+		local function currentTime()
+			local t = os.date("*t")
+			if use12h then
+				local h = t.hour % 12
+				if h == 0 then h = 12 end
+				return string.format("%d:%02d %s", h, t.min, t.hour >= 12 and "PM" or "AM")
+			end
+			return string.format("%02d:%02d", t.hour, t.min)
+		end
+		timeLbl.Text = currentTime()
+		
+		-- Switch format at any time, e.g. Window:SetTimeFormat("12h")
+		function Window:SetTimeFormat(fmt)
+			use12h = tostring(fmt):lower():find("12") ~= nil
+			timeLbl.Text = currentTime()
+		end
+	end
 
 	table.insert(Window._cleanups, makeDraggable(BG, TopBar))
 
@@ -1029,6 +1141,10 @@ local menuList = create("ScrollingFrame", {
 			hidden = not hidden
 			BG.Visible = not hidden
 		end
+	end)
+
+    table.insert(Window._cleanups, function()
+		if toggleConn then toggleConn:Disconnect() end
 	end)
 
 	----------------------------------------------------------------
@@ -1127,19 +1243,19 @@ local menuList = create("ScrollingFrame", {
 		--   :_addLabel(props)  :_fire(...)  :_own(connOrFn)
 		-- opts: Kind, Height, Class ("Frame"|"TextButton"), Plain, AutoY, Callback
 		------------------------------------------------------------
-       local function newElement(opts)
+	   local function newElement(opts)
 	   opts = opts or {}
 	   local parent = Tab._parent or page
-	    Tab._orders[parent] = (Tab._orders[parent] or 0) + 1
+		Tab._orders[parent] = (Tab._orders[parent] or 0) + 1
 
-	    local props = {
+		local props = {
 		BackgroundColor3 = Theme.Element,
 		BackgroundTransparency = opts.Plain and 1 or 0,
 		Size = UDim2.new(1, 0, 0, opts.Height or 34),
 		LayoutOrder = Tab._orders[parent],
 		BorderSizePixel = 0,
 		Parent = parent,
-	    }
+		}
 			if opts.AutoY then props.AutomaticSize = Enum.AutomaticSize.Y end
 			if opts.Class == "TextButton" then
 				props.Text = ""
@@ -1971,7 +2087,7 @@ end
 			rebuild()
 			return el
 		end
-        ------------------------------------------------------------
+		------------------------------------------------------------
 		-- Containers, Sections, Columns
 		------------------------------------------------------------
 		local ELEMENT_METHODS = {
