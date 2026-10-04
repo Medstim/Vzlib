@@ -1317,12 +1317,22 @@ function Tab:CreateToggle(tocfg)
 
 function Tab:CreateStatList(scfg)
 	scfg = scfg or {}
-	local el = newElement({ Kind = "StatList", Height = 36 })
+	local HEADER_H = 36
+	local PAD_BOTTOM = 8
+	local GAP = 4
+
+	local el = newElement({ Kind = "StatList", Height = HEADER_H })
 	local row = el.Instance
 	row.ClipsDescendants = true
 
-	local header = create("TextButton", { Text = "", AutoButtonColor = false, BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 36), Parent = row })
-	
+	local header = create("TextButton", {
+		Text = "",
+		AutoButtonColor = false,
+		BackgroundTransparency = 1,
+		Size = UDim2.new(1, 0, 0, HEADER_H),
+		Parent = row,
+	})
+
 	local hasIcon = scfg.Icon ~= nil and scfg.Icon ~= ""
 	if hasIcon then
 		local titleIcon = icon(scfg.Icon, 16, false, Theme.SubText)
@@ -1331,72 +1341,85 @@ function Tab:CreateStatList(scfg)
 		titleIcon.Parent = header
 	end
 
-	el:_addLabel({ 
-		Text = scfg.Name or "Info Dropdown", 
-		Position = UDim2.new(0, hasIcon and 32 or 10, 0, 0),
-		Size = UDim2.new(1, hasIcon and -50 or -32, 1, 0), 
-		Parent = header 
+	-- Title label built directly so the offsets are exact
+	local leftX = hasIcon and 34 or 12
+	create("TextLabel", {
+		BackgroundTransparency = 1,
+		Text = scfg.Name or "Info Dropdown",
+		FontFace = FONT_MAIN,
+		TextColor3 = Theme.Text,
+		TextSize = 14,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		TextYAlignment = Enum.TextYAlignment.Center,
+		TextTruncate = Enum.TextTruncate.AtEnd,
+		AnchorPoint = Vector2.new(0, 0.5),
+		Position = UDim2.new(0, leftX, 0.5, 0),
+		Size = UDim2.new(1, -(leftX + 34), 1, 0),
+		Parent = header,
 	})
 
 	local chev = icon("chevron-small-down", 16, false, Theme.SubText)
-	chev.AnchorPoint = Vector2.new(1, 0.5)
-	chev.Position = UDim2.new(1, -10, 0.5, 0)
+	chev.AnchorPoint = Vector2.new(0.5, 0.5)
+	chev.Position = UDim2.new(1, -18, 0.5, 0)
+	chev.Rotation = 0
 	chev.Parent = header
 
 	local list = create("Frame", {
-		BackgroundTransparency = 1, 
-		Position = UDim2.new(0, 0, 0, 36),
-		Size = UDim2.new(1, 0, 0, 0),
-		Visible = false, 
+		BackgroundTransparency = 1,
+		Position = UDim2.new(0, 0, 0, HEADER_H),
+		Size = UDim2.new(1, 0, 1, -HEADER_H),
+		Visible = false,
 		Parent = row,
 	})
 
-	local listLayout = create("UIListLayout", { 
-		Padding = UDim.new(0, 4), 
+	create("UIListLayout", {
+		Padding = UDim.new(0, GAP),
 		SortOrder = Enum.SortOrder.LayoutOrder,
-		Parent = list 
+		Parent = list,
 	})
 
-	create("UIPadding", { 
-		PaddingLeft = UDim.new(0, 8), 
-		PaddingRight = UDim.new(0, 8), 
-		PaddingBottom = UDim.new(0, 8),
-		Parent = list 
+	create("UIPadding", {
+		PaddingLeft = UDim.new(0, 8),
+		PaddingRight = UDim.new(0, 8),
+		PaddingBottom = UDim.new(0, PAD_BOTTOM),
+		Parent = list,
 	})
 
 	local items = {}
+	local count = 0
+	local order = 0
 	local open = false
 
+	-- Height computed from the items themselves (no layout timing issues)
 	local function openHeight()
-		-- Measure absolute layout height + header (36) + padding (8)
-		local contentHeight = listLayout.AbsoluteContentSize.Y
-		if contentHeight == 0 then return 44 end
-		return 36 + contentHeight + 8
+		local total, n = 0, 0
+		for _, data in pairs(items) do
+			total += data.frame.Size.Y.Offset
+			n += 1
+		end
+		if n == 0 then
+			return HEADER_H + PAD_BOTTOM
+		end
+		return HEADER_H + total + GAP * (n - 1) + PAD_BOTTOM
 	end
 
-	local function updateSize()
-		if open then
-			task.defer(function()
-				list.Size = UDim2.new(1, 0, 0, listLayout.AbsoluteContentSize.Y)
-				tween(row, TI_S, { Size = UDim2.new(1, 0, 0, openHeight()) })
-			end)
-		end
+	local function applySize()
+		tween(row, TI_S, { Size = UDim2.new(1, 0, 0, open and openHeight() or HEADER_H) })
 	end
 
 	local function toggle(force)
 		if force ~= nil then open = force else open = not open end
-		if open then 
-			list.Visible = true 
-			chev.Image = icon("chevron-small-up", 16, false, Theme.SubText).Image or chev.Image
-			updateSize()
+
+		tween(chev, TI_S, { Rotation = open and 180 or 0 })
+
+		if open then
+			list.Visible = true
+			applySize()
 		else
-			tween(row, TI_S, { Size = UDim2.new(1, 0, 0, 36) })
-			task.delay(0.12, function() 
-				if not open then 
-					list.Visible = false 
-					chev.Image = icon("chevron-small-down", 16, false, Theme.SubText).Image or chev.Image
-				end 
-			end) 
+			applySize()
+			task.delay(0.15, function()
+				if not open then list.Visible = false end
+			end)
 		end
 	end
 
@@ -1415,13 +1438,8 @@ function Tab:CreateStatList(scfg)
 			return items[name]
 		end
 
+		order += 1
 		local itemHeight = isValueStat and 26 or 28
-		local itemRow = create("Frame", {
-			BackgroundColor3 = Theme.Secondary,
-			Size = UDim2.new(1, 0, 0, itemHeight),
-			BorderSizePixel = 0,
-			Parent = list,
-		})
 		corner(itemRow, 4)
 
 		if not isValueStat then
@@ -1468,7 +1486,7 @@ function Tab:CreateStatList(scfg)
 			items[name] = { frame = itemRow, nameLbl = nameLbl, valLbl = valLbl }
 		end
 
-		updateSize()
+		if open then applySize() end
 		return items[name]
 	end
 
@@ -1480,7 +1498,7 @@ function Tab:CreateStatList(scfg)
 		if items[name] then
 			items[name].frame:Destroy()
 			items[name] = nil
-			updateSize()
+			if open then applySize() end
 		end
 	end
 
@@ -1489,7 +1507,7 @@ function Tab:CreateStatList(scfg)
 			data.frame:Destroy()
 		end
 		table.clear(items)
-		updateSize()
+		if open then applySize() end
 	end
 
 	return el
